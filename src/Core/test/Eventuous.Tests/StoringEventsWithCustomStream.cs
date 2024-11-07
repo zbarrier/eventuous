@@ -16,13 +16,13 @@ public class StoringEventsWithCustomStream : NaiveFixture {
 
     BookingService Service { get; }
 
-    [Fact]
-    public async Task TestOnNew() {
+    [Test]
+    public async Task TestOnNew(CancellationToken cancellationToken) {
         var cmd = CreateBookRoomCommand();
 
         Change[] expected = [new(new RoomBooked(cmd.RoomId, cmd.CheckIn, cmd.CheckOut, cmd.Price), TypeNames.RoomBooked)];
 
-        var result = await Service.Handle(cmd, default);
+        var result = await Service.Handle(cmd, cancellationToken);
 
         result.TryGet(out var ok).Should().BeTrue();
         ok!.Changes.Should().BeEquivalentTo(expected);
@@ -32,11 +32,11 @@ public class StoringEventsWithCustomStream : NaiveFixture {
         evt[0].Payload.Should().BeEquivalentTo(ok.Changes.First().Event);
     }
 
-    [Fact]
-    public async Task TestOnExisting() {
+    [Test]
+    public async Task TestOnExisting(CancellationToken cancellationToken) {
         var cmd = CreateBookRoomCommand();
 
-        await Service.Handle(cmd, default);
+        await Service.Handle(cmd, cancellationToken);
 
         var secondCmd = new Commands.RecordPayment(new(cmd.BookingId), Auto.Create<string>(), new(cmd.Price), DateTimeOffset.Now);
 
@@ -46,7 +46,7 @@ public class StoringEventsWithCustomStream : NaiveFixture {
             new(new BookingFullyPaid(secondCmd.PaidAt), TypeNames.BookingFullyPaid)
         };
 
-        var result = await Service.Handle(secondCmd, default);
+        var result = await Service.Handle(secondCmd, cancellationToken);
 
         result.TryGet(out var ok).Should().BeTrue();
         ok!.Changes.Should().BeEquivalentTo(expected);

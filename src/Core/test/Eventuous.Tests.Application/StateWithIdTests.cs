@@ -12,8 +12,8 @@ public class StateWithIdTests {
 
     public StateWithIdTests() => _service = new(_store);
 
-    [Fact]
-    public async Task ShouldGetIdForNew() {
+    [Test]
+    public async Task ShouldGetIdForNew(CancellationToken cancellationToken) {
         var map   = new StreamNameMap();
         var id    = Guid.NewGuid().ToString();
         var result = await Seed(id);
@@ -24,7 +24,7 @@ public class StateWithIdTests {
         result.TryGet(out var ok).Should().BeTrue();
         ok!.State.Id.Should().Be(bookingId);
 
-        var instance = await _store.LoadAggregate<Booking, BookingState, BookingId>(bookingId, map, true);
+        var instance = await _store.LoadAggregate<Booking, BookingState, BookingId>(bookingId, map, true, cancellationToken: cancellationToken);
 
         // Ensure that the id was set when the aggregate was loaded
         instance.State.Id.Should().Be(bookingId);

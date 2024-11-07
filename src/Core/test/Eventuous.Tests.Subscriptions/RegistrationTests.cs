@@ -3,25 +3,24 @@ using Eventuous.Subscriptions;
 using Eventuous.Subscriptions.Context;
 using Eventuous.Subscriptions.Diagnostics;
 using Eventuous.Subscriptions.Filters;
-using Eventuous.Subscriptions.Logging;
-using Eventuous.TestHelpers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging.Abstractions;
+using LoggingExtensions = Eventuous.TestHelpers.TUnit.Logging.LoggingExtensions;
 
 // ReSharper disable ClassNeverInstantiated.Local
 
 namespace Eventuous.Tests.Subscriptions;
 
-public class RegistrationTests(ITestOutputHelper outputHelper) {
+public class RegistrationTests() {
     readonly TestServer     _server = new(BuildHost());
     readonly Fixture        _auto   = new();
-    readonly ILoggerFactory _logger = Logging.GetLoggerFactory(outputHelper);
+    readonly ILoggerFactory _logger = LoggingExtensions.GetLoggerFactory();
 
-    [Fact]
+    [Test]
     public void ShouldBeSingletons() {
         var subs1 = _server.Services.GetServices<TestSub>().ToArray();
         var subs2 = _server.Services.GetServices<TestSub>().ToArray();
@@ -29,22 +28,22 @@ public class RegistrationTests(ITestOutputHelper outputHelper) {
         subs1[1].Should().BeSameAs(subs2[1]);
     }
 
-    [Fact]
+    [Test]
     public void ShouldRegisterBothSubs() {
         var subs = _server.Services.GetServices<TestSub>().ToArray();
         subs.Length.Should().Be(2);
     }
 
-    [Fact]
+    [Test]
     public void SubsShouldHaveProperIds() {
         var subs = _server.Services.GetServices<TestSub>().ToArray();
         subs[0].Options.SubscriptionId.Should().Be("sub1");
         subs[1].Options.SubscriptionId.Should().Be("sub2");
     }
 
-    [Theory]
-    [InlineData(0, typeof(Handler1))]
-    [InlineData(1, typeof(Handler2))]
+    [Test]
+    [Arguments(0, typeof(Handler1))]
+    [Arguments(1, typeof(Handler2))]
     public async Task SubsShouldHaveHandlers(int position, Type handlerType) {
         var subs    = _server.Services.GetServices<TestSub>().ToArray();
         var logger  = _server.Services.GetRequiredService<TestHandlerLogger>();
@@ -64,7 +63,7 @@ public class RegistrationTests(ITestOutputHelper outputHelper) {
             new Metadata(),
             current.SubscriptionId,
             default
-        ) { LogContext = new LogContext(current.SubscriptionId, _logger) };
+        ) { LogContext = new(current.SubscriptionId, _logger) };
         await current.Pipe.Send(ctx);
 
         var handled = logger.Records.Where(x => x.Context.SubscriptionId == current.SubscriptionId).ToArray();
@@ -74,7 +73,7 @@ public class RegistrationTests(ITestOutputHelper outputHelper) {
         handled[0].Context.MessageType.Should().Be(ctx.MessageType);
     }
 
-    [Fact]
+    [Test]
     public void ShouldRegisterBothAsHealthReporters() {
         var services = _server.Services.GetServices<ISubscriptionHealth>().ToArray();
         var health   = _server.Services.GetServices<SubscriptionHealthCheck>().ToArray();
@@ -84,8 +83,8 @@ public class RegistrationTests(ITestOutputHelper outputHelper) {
         services.Single().Should().BeSameAs(health.Single());
     }
 
-    [Fact]
-    public async Task BothShouldBeRunningAndReportHealthy() {
+    [Test]
+    public async Task BothShouldBeRunningAndReportHealthy(CancellationToken cancellationToken) {
         var subs   = _server.Services.GetServices<TestSub>().ToArray();
         var health = _server.Services.GetRequiredService<ISubscriptionHealth>() as SubscriptionHealthCheck;
 
@@ -93,13 +92,13 @@ public class RegistrationTests(ITestOutputHelper outputHelper) {
         subs.Should().AllSatisfy(x => x.IsRunning.Should().BeTrue());
 
         health.Should().NotBeNull();
-        var check = await health!.CheckHealthAsync(new HealthCheckContext());
+        var check = await health!.CheckHealthAsync(new(), cancellationToken);
         check.Data["sub1"].Should().Be("Healthy");
         check.Data["sub2"].Should().Be("Healthy");
         check.Status.Should().Be(HealthStatus.Healthy);
     }
 
-    [Fact]
+    [Test]
     public void ShouldRegisterTwoMeasures() {
         var subs = _server.Services.GetServices<TestSub>().ToArray();
         subs.Should().NotBeEmpty();
@@ -138,24 +137,23 @@ public class RegistrationTests(ITestOutputHelper outputHelper) {
 
         protected override ValueTask Unsubscribe(CancellationToken cancellationToken) => default;
 
-        public GetSubscriptionEndOfStream GetMeasure()
-            => _ => new(new EndOfStream(SubscriptionId, 0, DateTime.UtcNow));
+        public GetSubscriptionEndOfStream GetMeasure() => _ => new(new EndOfStream(SubscriptionId, 0, DateTime.UtcNow));
     }
 
-    abstract class BaseTestHandler(TestHandlerLogger logger) : BaseEventHandler {
+    public abstract class BaseTestHandler(TestHandlerLogger logger) : BaseEventHandler {
         public override ValueTask<EventHandlingStatus> HandleEvent(IMessageConsumeContext ctx) => logger.EventReceived(GetType(), ctx);
     }
 
-    class Handler1(TestHandlerLogger logger) : BaseTestHandler(logger);
+    public class Handler1(TestHandlerLogger logger) : BaseTestHandler(logger);
 
-    class Handler2(TestHandlerLogger logger) : BaseTestHandler(logger);
+    public class Handler2(TestHandlerLogger logger) : BaseTestHandler(logger);
 
     record TestEvent;
 }
 
-class TestHandlerLogger {
+public class TestHandlerLogger {
     public ValueTask<EventHandlingStatus> EventReceived(Type handlerType, IMessageConsumeContext ctx) {
-        Records.Add(new TestHandlerLogRecord(handlerType, ctx));
+        Records.Add(new(handlerType, ctx));
 
         return ValueTask.FromResult(EventHandlingStatus.Success);
     }
@@ -163,4 +161,4 @@ class TestHandlerLogger {
     public List<TestHandlerLogRecord> Records { get; } = [];
 }
 
-record TestHandlerLogRecord(Type HandlerType, IMessageConsumeContext Context);
+public record TestHandlerLogRecord(Type HandlerType, IMessageConsumeContext Context);

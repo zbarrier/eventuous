@@ -1,8 +1,8 @@
 using System.Diagnostics.Tracing;
 
-namespace Eventuous.TestHelpers;
+namespace Eventuous.TestHelpers.TUnit;
 
-public sealed class TestEventListener(ITestOutputHelper outputHelper, Action<EventWrittenEventArgs>? act = null, params string[] prefixes) : EventListener {
+public sealed class TestEventListener(Action<EventWrittenEventArgs>? act = null, params string[] prefixes) : EventListener {
     readonly string[]          _prefixes     = prefixes.Length > 0 ? prefixes : ["OpenTelemetry", "eventuous"];
     readonly List<EventSource> _eventSources = [];
 
@@ -23,7 +23,7 @@ public sealed class TestEventListener(ITestOutputHelper outputHelper, Action<Eve
 #nullable disable
     protected override void OnEventWritten(EventWrittenEventArgs evt) {
         var message = evt.Message != null && (evt.Payload?.Count ?? 0) > 0 ? string.Format(evt.Message, evt.Payload.ToArray()) : evt.Message;
-        outputHelper.WriteLine($"{evt.EventSource.Name} - EventId: [{evt.EventId}], EventName: [{evt.EventName}], Message: [{message}]");
+        TestContext.Current?.OutputWriter.WriteLine($"{evt.EventSource.Name} - EventId: [{evt.EventId}], EventName: [{evt.EventName}], Message: [{message}]");
         act?.Invoke(evt);
     }
 #nullable enable

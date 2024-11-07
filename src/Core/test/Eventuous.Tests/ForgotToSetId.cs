@@ -5,10 +5,10 @@ namespace Eventuous.Tests;
 public class ForgotToSetId : NaiveFixture {
     public ForgotToSetId() => Service = new(this.EventStore);
 
-    [Fact]
-    public async Task ShouldFailWithNoId() {
+    [Test]
+    public async Task ShouldFailWithNoId(CancellationToken cancellationToken) {
         var cmd    = new DoIt(Auto.Create<string>());
-        var result = await Service.Handle(cmd, default);
+        var result = await Service.Handle(cmd, cancellationToken);
         result.Success.Should().BeTrue();
     }
 

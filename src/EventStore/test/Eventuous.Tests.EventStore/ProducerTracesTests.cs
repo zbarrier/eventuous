@@ -7,12 +7,12 @@ using Eventuous.Tests.Subscriptions.Base;
 
 namespace Eventuous.Tests.EventStore;
 
-public class TracesTests : LegacySubscriptionFixture<TracedHandler>, IDisposable {
+public class TracesTests : LegacySubscriptionFixture<TracedHandler> {
     readonly ActivityListener _listener;
 
     static TracesTests() => TypeMap.Instance.AddType<TestEvent>(TestEvent.TypeName);
 
-    public TracesTests(ITestOutputHelper output) : base(output, new(), false) {
+    public TracesTests() : base(new()) {
         _listener = new() {
             ShouldListenTo = _ => true,
             Sample         = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
@@ -28,16 +28,16 @@ public class TracesTests : LegacySubscriptionFixture<TracedHandler>, IDisposable
         ActivitySource.AddActivityListener(_listener);
     }
 
-    [Fact]
-    [Trait("Category", "Diagnostics")]
-    public async Task ShouldPropagateRemoteContext() {
+    [Test]
+    [Category("Diagnostics")]
+    public async Task ShouldPropagateRemoteContext(CancellationToken cancellationToken) {
         var testEvent = Auto.Create<TestEvent>();
 
-        await Producer.Produce(Stream, testEvent, new());
+        await Producer.Produce(Stream, testEvent, new(), cancellationToken: cancellationToken);
 
         await Start();
 
-        var writtenEvent = (await StoreFixture.EventStore.ReadEvents(Stream, StreamReadPosition.Start, 1, default))[0];
+        var writtenEvent = (await StoreFixture.EventStore.ReadEvents(Stream, StreamReadPosition.Start, 1, cancellationToken))[0];
 
         var meta = writtenEvent.Metadata;
         var (traceId, spanId, _) = meta.GetTracingMeta();
@@ -46,7 +46,7 @@ public class TracesTests : LegacySubscriptionFixture<TracedHandler>, IDisposable
         spanId.Should().NotBe(RecordedTrace.DefaultSpanId);
 
         while (Handler.Contexts.Count == 0) {
-            await Task.Delay(100);
+            await Task.Delay(100, cancellationToken);
         }
 
         await Stop();
@@ -61,5 +61,6 @@ public class TracesTests : LegacySubscriptionFixture<TracedHandler>, IDisposable
         recordedTrace.ParentSpanId!.Value.ToString().Should().Be(spanId);
     }
 
+    [After(Test)]
     public void Dispose() => _listener.Dispose();
 }

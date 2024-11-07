@@ -5,10 +5,11 @@ using MongoDb.Bson.NodaTime;
 using MongoDB.Driver;
 using Testcontainers.EventStoreDb;
 using Testcontainers.MongoDb;
+using TUnit.Core.Interfaces;
 
 namespace Eventuous.Tests.Projections.MongoDB.Fixtures;
 
-public sealed class IntegrationFixture : IAsyncLifetime {
+public sealed class IntegrationFixture : IAsyncInitializer, IAsyncDisposable {
     public IEventStore      EventStore { get; set; }         = null!;
     public EventStoreClient Client     { get; private set; } = null!;
     public IMongoDatabase   Mongo      { get; private set; } = null!;
@@ -44,7 +45,7 @@ public sealed class IntegrationFixture : IAsyncLifetime {
         Mongo = new MongoClient(mongoSettings).GetDatabase("bookings");
     }
 
-    public async Task DisposeAsync() {
+    public async ValueTask DisposeAsync() {
         await Client.DisposeAsync();
         await _esdbContainer.DisposeAsync();
     }

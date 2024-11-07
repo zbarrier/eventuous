@@ -1,6 +1,3 @@
-// Copyright (C) Ubiquitous AS.All rights reserved
-// Licensed under the Apache License, Version 2.0.
-
 using DotNet.Testcontainers.Containers;
 using Eventuous.Diagnostics;
 using Eventuous.Subscriptions.Registrations;
@@ -11,13 +8,25 @@ using Microsoft.Extensions.Hosting;
 
 namespace Eventuous.Tests.OpenTelemetry.Fixtures;
 
-public abstract class MetricsSubscriptionFixtureBase<TContainer, TProducer, TSubscription, TSubscriptionOptions> : StoreFixtureBase<TContainer>
+public interface IMetricsSubscriptionFixtureBase {
+    StreamName     Stream          { get; }
+    MessageCounter Counter         { get; }
+    TestExporter   Exporter        { get; }
+    int            Count           { get; }
+    public string  DefaultTagKey   { get; }
+    public string  DefaultTagValue { get; }
+    string         SubscriptionId  { get; }
+    IProducer      Producer        { get; }
+    IFixture       Auto            { get; }
+}
+
+public abstract class MetricsSubscriptionFixtureBase<TContainer, TProducer, TSubscription, TSubscriptionOptions> : StoreFixtureBase<TContainer>, IMetricsSubscriptionFixtureBase
     where TContainer : DockerContainer
     where TProducer : class, IProducer
     where TSubscription : EventSubscriptionWithCheckpoint<TSubscriptionOptions>, IMeasuredSubscription
     where TSubscriptionOptions : SubscriptionWithCheckpointOptions {
     // ReSharper disable once ConvertToConstant.Global
-    public readonly int Count = 100;
+    public int Count => 100;
 
     // ReSharper disable once StaticMemberInGenericType
     static readonly KeyValuePair<string, string> DefaultTag = new("test", "foo");
@@ -35,16 +44,14 @@ public abstract class MetricsSubscriptionFixtureBase<TContainer, TProducer, TSub
     public string     DefaultTagValue => DefaultTag.Value;
 
     // ReSharper disable once ConvertToConstant.Global
-    public readonly string SubscriptionId = "test-sub";
+    public string SubscriptionId => "test-sub";
 
     TestListener? _listener;
 
     protected abstract void ConfigureSubscription(TSubscriptionOptions options);
 
     protected override void SetupServices(IServiceCollection services) {
-        if (Output != null) {
-            _listener = new(Output);
-        }
+        _listener = new();
 
         services.AddProducer<TProducer>();
         services.AddSingleton<MessageCounter>();
@@ -66,17 +73,17 @@ public abstract class MetricsSubscriptionFixtureBase<TContainer, TProducer, TSub
         Counter  = provider.GetRequiredService<MessageCounter>();
     }
 
-    public TProducer      Producer { get; private set; } = null!;
+    public IProducer      Producer { get; private set; } = null!;
     public MessageCounter Counter  { get; private set; } = null!;
     public TestExporter   Exporter { get; }              = new();
 
-    public override async Task DisposeAsync() {
+    public override async ValueTask DisposeAsync() {
         await base.DisposeAsync();
         Exporter.Dispose();
         _listener?.Dispose();
     }
 }
 
-class TestListener(ITestOutputHelper output) : GenericListener(SubscriptionMetrics.ListenerName) {
-    protected override void OnEvent(KeyValuePair<string, object?> obj) => output.WriteLine($"{obj.Key} {obj.Value}");
+class TestListener() : GenericListener(SubscriptionMetrics.ListenerName) {
+    protected override void OnEvent(KeyValuePair<string, object?> obj) => TestContext.Current?.OutputWriter.WriteLine($"{obj.Key} {obj.Value}");
 }

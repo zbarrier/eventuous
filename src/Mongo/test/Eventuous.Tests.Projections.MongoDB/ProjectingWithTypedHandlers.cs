@@ -7,10 +7,11 @@ using static Eventuous.Sut.Domain.BookingEvents;
 
 namespace Eventuous.Tests.Projections.MongoDB;
 
-public sealed class ProjectingWithTypedHandlers(IntegrationFixture fixture, ITestOutputHelper output)
-    : ProjectionTestBase<ProjectingWithTypedHandlers.SutProjection>(nameof(ProjectingWithTypedHandlers), fixture, output) {
-    [Fact]
-    public async Task ShouldProjectImported() {
+[ClassDataSource<IntegrationFixture>]
+public sealed class ProjectingWithTypedHandlers(IntegrationFixture fixture)
+    : ProjectionTestBase<ProjectingWithTypedHandlers.SutProjection>(nameof(ProjectingWithTypedHandlers), fixture) {
+    [Test]
+    public async Task ShouldProjectImported(CancellationToken cancellationToken) {
         var evt    = DomainFixture.CreateImportBooking();
         var id     = new BookingId(CreateId());
         var stream = StreamNameFactory.For<Booking, BookingState, BookingId>(id);
@@ -29,7 +30,7 @@ public sealed class ProjectingWithTypedHandlers(IntegrationFixture fixture, ITes
             StreamPosition = (ulong)append.NextExpectedVersion
         };
 
-        var actual = await Fixture.Mongo.LoadDocument<BookingDocument>(id.ToString());
+        var actual = await Fixture.Mongo.LoadDocument<BookingDocument>(id.ToString(), cancellationToken: cancellationToken);
         actual.Should().Be(expected);
     }
 

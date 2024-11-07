@@ -15,8 +15,8 @@ public class StoringEvents : NaiveFixture {
 
     BookingService Service { get; }
 
-    [Fact]
-    public async Task StoreInitial() {
+    [Test]
+    public async Task StoreInitial(CancellationToken cancellationToken) {
         var cmd = new Commands.BookRoom(
             Auto.Create<string>(),
             Auto.Create<string>(),
@@ -27,7 +27,7 @@ public class StoringEvents : NaiveFixture {
 
         Change[] expected = [new(new RoomBooked(cmd.RoomId, cmd.CheckIn, cmd.CheckOut, cmd.Price), TypeNames.RoomBooked)];
 
-        var result = await Service.Handle(cmd, default);
+        var result = await Service.Handle(cmd, cancellationToken);
 
         result.TryGet(out var ok).Should().BeTrue();
         ok!.Changes.Should().BeEquivalentTo(expected);

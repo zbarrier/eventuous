@@ -4,20 +4,18 @@ using Eventuous.Tests.Subscriptions.Base;
 
 namespace Eventuous.Tests.EventStore.Subscriptions;
 
-[Collection("Database")]
-public class PublishAndSubscribeOneTests(ITestOutputHelper output)
-    : LegacySubscriptionFixture<TestEventHandler>(output, new(new(null, output)), false, logLevel: LogLevel.Debug) {
-    [Fact]
-    [Trait("Category", "Stream catch-up subscription")]
-    public async Task SubscribeAndProduce() {
+public class PublishAndSubscribeOneTests() : LegacySubscriptionFixture(null, false) {
+    [Test]
+    [Category("Stream catch-up subscription")]
+    public async Task SubscribeAndProduce(CancellationToken cancellationToken) {
         var testEvent = Auto.Create<TestEvent>();
 
         await Start();
-        await Producer.Produce(Stream, testEvent, new Metadata());
-        await Handler.AssertCollection(5.Seconds(), [testEvent]).Validate();
+        await Producer.Produce(Stream, testEvent, new(), cancellationToken: cancellationToken);
+        await Handler.AssertCollection(5.Seconds(), [testEvent]).Validate(cancellationToken);
         await Stop();
 
-        await Task.Delay(100);
+        await Task.Delay(100, cancellationToken);
         CheckpointStore.GetCheckpoint(Subscription.SubscriptionId).Should().Be(0);
     }
 }

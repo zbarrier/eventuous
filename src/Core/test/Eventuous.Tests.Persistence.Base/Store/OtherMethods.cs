@@ -3,7 +3,7 @@ using Eventuous.Tests.Persistence.Base.Fixtures;
 
 namespace Eventuous.Tests.Persistence.Base.Store;
 
-public abstract class StoreOtherOpsTests<T> : IClassFixture<T> where T : StoreFixtureBase {
+public abstract class StoreOtherOpsTests<T> where T : StoreFixtureBase {
     readonly T _fixture;
 
     protected StoreOtherOpsTests(T fixture) {
@@ -11,22 +11,22 @@ public abstract class StoreOtherOpsTests<T> : IClassFixture<T> where T : StoreFi
         fixture.TypeMapper.RegisterKnownEventTypes(typeof(BookingEvents.BookingImported).Assembly);
     }
 
-    [Fact]
-    [Trait("Category", "Store")]
-    public async Task StreamShouldExist() {
+    [Test]
+    [Category("Store")]
+    public async Task StreamShouldExist(CancellationToken cancellationToken) {
         var evt        = _fixture.CreateEvent();
         var streamName = _fixture.GetStreamName();
         await _fixture.AppendEvent(streamName, evt, ExpectedStreamVersion.NoStream);
 
-        var exists = await _fixture.EventStore.StreamExists(streamName, default);
-        exists.Should().BeTrue();
+        var exists = await _fixture.EventStore.StreamExists(streamName, cancellationToken);
+        await Assert.That(exists).IsTrue();
     }
 
-    [Fact]
-    [Trait("Category", "Store")]
-    public async Task StreamShouldNotExist() {
+    [Test]
+    [Category("Store")]
+    public async Task StreamShouldNotExist(CancellationToken cancellationToken) {
         var streamName = _fixture.GetStreamName();
-        var exists     = await _fixture.EventStore.StreamExists(streamName, default);
-        exists.Should().BeFalse();
+        var exists     = await _fixture.EventStore.StreamExists(streamName, cancellationToken);
+        await Assert.That(exists).IsFalse();
     }
 }

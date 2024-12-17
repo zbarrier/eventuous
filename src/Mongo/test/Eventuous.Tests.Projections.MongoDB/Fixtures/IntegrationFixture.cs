@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using EventStore.Client;
 using Eventuous.EventStore;
 using Eventuous.TestHelpers;
@@ -13,7 +14,6 @@ public sealed class IntegrationFixture : IAsyncInitializer, IAsyncDisposable {
     public IEventStore      EventStore { get; set; }         = null!;
     public EventStoreClient Client     { get; private set; } = null!;
     public IMongoDatabase   Mongo      { get; private set; } = null!;
-    public Fixture          Auto       { get; }              = new();
 
     static IEventSerializer Serializer { get; } = new DefaultEventSerializer(TestPrimitives.DefaultOptions);
 
@@ -34,12 +34,15 @@ public sealed class IntegrationFixture : IAsyncInitializer, IAsyncDisposable {
     MongoDbContainer      _mongoContainer = null!;
 
     public async Task InitializeAsync() {
-        _esdbContainer = new EventStoreDbBuilder().Build();
+        var image = RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+            ? "eventstore/eventstore:24.6.0-alpha-arm64v8"
+            : "eventstore/eventstore:24.6";
+        _esdbContainer = new EventStoreDbBuilder().WithImage(image).Build();
         await _esdbContainer.StartAsync();
         var settings = EventStoreClientSettings.Create(_esdbContainer.GetConnectionString());
         Client          = new(settings);
         EventStore      = new EsdbEventStore(Client);
-        _mongoContainer = new MongoDbBuilder().Build();
+        _mongoContainer = new MongoDbBuilder().WithImage("mongo:8").Build();
         await _mongoContainer.StartAsync();
         var mongoSettings = MongoClientSettings.FromConnectionString(_mongoContainer.GetConnectionString());
         Mongo = new MongoClient(mongoSettings).GetDatabase("bookings");

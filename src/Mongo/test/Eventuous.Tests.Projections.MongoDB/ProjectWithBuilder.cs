@@ -12,11 +12,11 @@ public class ProjectWithBuilder(IntegrationFixture fixture) {
     [Test]
     [MethodDataSource(typeof(CollectionSource), nameof(CollectionSource.TestOptions))]
     public async Task ShouldProjectImported(MongoProjectionOptions<BookingDocument>? options) {
+        var evt               = DomainFixture.CreateImportBookingEvent();
         var projectionFixture = new ProjectionTestBase<SutProjection>(nameof(ProjectWithBuilder), fixture);
-        var evt               = DomainFixture.CreateImportBooking();
         var id                = new BookingId(projectionFixture.CreateId());
         var stream            = StreamNameFactory.For<Booking, BookingState, BookingId>(id);
-        
+
         await projectionFixture.InitializeAsync();
 
         var first = await Act(projectionFixture, stream, evt);
@@ -33,7 +33,7 @@ public class ProjectWithBuilder(IntegrationFixture fixture) {
 
         first.Doc.Should().BeEquivalentTo(expected);
 
-        var payment = new BookingPaymentRegistered(projectionFixture.Fixture.Auto.Create<string>(), evt.Price);
+        var payment = new BookingPaymentRegistered(Guid.NewGuid().ToString(), evt.Price);
 
         var second = await Act(projectionFixture, stream, payment);
 
@@ -94,8 +94,8 @@ public class ProjectWithBuilder(IntegrationFixture fixture) {
 }
 
 public static class CollectionSource {
-    public static IEnumerable<MongoProjectionOptions<BookingDocument>?> TestOptions() {
-        yield return null;
-        yield return new() { CollectionName = "test" };
+    public static IEnumerable<Func<MongoProjectionOptions<BookingDocument>?>> TestOptions() {
+        yield return () => null;
+        yield return () => new() { CollectionName = "test" };
     }
 }

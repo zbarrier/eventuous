@@ -1,3 +1,4 @@
+using Bogus;
 using JetBrains.Annotations;
 
 namespace Eventuous.Tests.Aggregates;
@@ -7,16 +8,12 @@ using Testing;
 using static Sut.Domain.BookingEvents;
 
 public class TwoAggregateOpsSpec : AggregateSpec<Booking, BookingState> {
-    readonly Fixture _fixture = new();
-
-    public TwoAggregateOpsSpec() => _testData = _fixture.Create<TestData>();
-
     protected override void When(Booking booking) {
         var amount   = new Money(_testData.Amount);
         var checkIn  = LocalDate.FromDateTime(DateTime.Today);
         var checkOut = checkIn.Plus(Period.FromDays(2));
 
-        booking.BookRoom(_fixture.Create<string>(), new(checkIn, checkOut), amount);
+        booking.BookRoom(Guid.NewGuid().ToString(), new(checkIn, checkOut), amount);
         booking.RecordPayment(_testData.PaymentId, amount, _testData.PaidAt);
     }
 
@@ -38,8 +35,10 @@ public class TwoAggregateOpsSpec : AggregateSpec<Booking, BookingState> {
     [Test]
     public void should_not_be_overpaid() => Then().State.IsOverpaid().Should().BeFalse();
 
-    readonly TestData _testData;
+    readonly TestData _testData = Faker.Generate();
 
     [UsedImplicitly]
     record TestData(string PaymentId, float Amount, DateTimeOffset PaidAt);
+
+    static readonly Faker<TestData> Faker = new Faker<TestData>().CustomInstantiator(f => new(f.Random.String(), f.Random.Float(), f.Date.Past()));
 }

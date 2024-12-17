@@ -12,7 +12,7 @@ public class ProjectWithBulkBuilder(IntegrationFixture fixture) : ProjectionTest
     [Test]
     public async Task ShouldProjectImported() {
         await InitializeAsync();
-        var evt    = DomainFixture.CreateImportBooking();
+        var evt    = DomainFixture.CreateImportBookingEvent();
         var id     = new BookingId(CreateId());
         var stream = StreamNameFactory.For<Booking, BookingState, BookingId>(id);
 
@@ -30,7 +30,7 @@ public class ProjectWithBulkBuilder(IntegrationFixture fixture) : ProjectionTest
 
         first.Doc.Should().BeEquivalentTo(expected);
 
-        var payment = new BookingPaymentRegistered(Fixture.Auto.Create<string>(), evt.Price);
+        var payment = new BookingPaymentRegistered(Guid.NewGuid().ToString(), evt.Price);
 
         var second = await Act(stream, payment);
         await DisposeAsync();

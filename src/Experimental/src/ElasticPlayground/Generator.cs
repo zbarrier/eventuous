@@ -1,13 +1,11 @@
 using Bogus;
+using Eventuous.Sut.App;
 
-namespace Eventuous.Tests.Fixtures;
+namespace ElasticPlayground;
 
-using Sut.App;
-using Testing;
-
-public class NaiveFixture {
-    protected IEventStore EventStore { get; } = new InMemoryEventStore();
-
+public class Generator{
+    public static string RandomString() => Guid.NewGuid().ToString();
+    
     static readonly Faker<Commands.BookRoom> Faker = new Faker<Commands.BookRoom>()
         .CustomInstantiator(
             f => {
@@ -18,5 +16,5 @@ public class NaiveFixture {
             }
         );
 
-    protected static Commands.BookRoom CreateBookRoomCommand() => Faker.Generate();
+    public static Commands.BookRoom CreateBookRoomCommand() => Faker.Generate();
 }

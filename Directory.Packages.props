@@ -13,7 +13,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <NpgsqlVersion>9.0.1</NpgsqlVersion>
-    <TUnitVersion>0.4.105</TUnitVersion>
+    <TUnitVersion>0.5.18</TUnitVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
@@ -36,7 +36,7 @@
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.10.0" />
     <PackageVersion Include="EventStore.Client.Grpc.PersistentSubscriptions" Version="23.3.7" />
     <PackageVersion Include="EventStore.Client.Grpc.Streams" Version="23.3.7" />
-    <PackageVersion Include="MongoDB.Driver" Version="3.0.0" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.1.0" />
     <PackageVersion Include="Google.Cloud.PubSub.V1" Version="3.19.0" />
     <PackageVersion Include="Confluent.Kafka" Version="2.6.1" />
     <PackageVersion Include="Npgsql" Version="$(NpgsqlVersion)" />
@@ -74,7 +74,7 @@
     <PackageVersion Include="Hypothesist" Version="3.0.97" />
     <PackageVersion Include="NodaTime" Version="3.2.0" />
     <PackageVersion Include="NodaTime.Serialization.SystemTextJson" Version="1.2.0" />
-    <PackageVersion Include="MongoDb.Bson.NodaTime" Version="3.0.0" />
+    <PackageVersion Include="MongoDb.Bson.NodaTime" Version="3.1.0" />
     <PackageVersion Include="Verify.DiffPlex" Version="3.1.2" />
     <PackageVersion Include="TUnit" Version="$(TUnitVersion)" />
     <PackageVersion Include="TUnit.Core" Version="$(TUnitVersion)" />
@@ -97,7 +97,7 @@
     <PackageVersion Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="9.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
-    <PackageVersion Include="Serilog.Sinks.Seq" Version="8.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Seq" Version="9.0.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.9.0" />
   </ItemGroup>
 </Project>

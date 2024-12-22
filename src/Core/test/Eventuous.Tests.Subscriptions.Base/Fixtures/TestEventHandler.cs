@@ -36,7 +36,6 @@ public class TestEventHandler(TestEventHandlerOptions? options) : BaseEventHandl
         => Hypothesis.On(_observer).Timebox(deadline).Exactly(collection.Count).Match(collection.Contains);
 
     public override async ValueTask<EventHandlingStatus> HandleEvent(IMessageConsumeContext context) {
-        TestContext.Current?.OutputWriter.WriteLine(context.Message!.ToString() ?? "Unknown");
         await Task.Delay(_delay);
         await _observer.Add(context.Message!, context.CancellationToken);
         Count++;

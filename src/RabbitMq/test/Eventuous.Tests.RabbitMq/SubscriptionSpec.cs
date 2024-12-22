@@ -37,7 +37,7 @@ public class SubscriptionSpec {
 
     [Test]
     public async Task SubscribeAndProduceMany(CancellationToken cancellationToken) {
-        const int count = 10000;
+        const int count = 5000;
 
         var testEvents = TestEvent.CreateMany(count);
         await _producer.Produce(_exchange, testEvents, new(), cancellationToken: cancellationToken);

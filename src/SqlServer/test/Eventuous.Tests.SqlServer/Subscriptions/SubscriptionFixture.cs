@@ -13,7 +13,7 @@ public class SubscriptionFixture<TSubscription, TSubscriptionOptions, TEventHand
         Action<TSubscriptionOptions> configureOptions,
         bool                         autoStart         = true,
         Action<IServiceCollection>?  configureServices = null,
-        LogLevel                     logLevel          = LogLevel.Debug
+        LogLevel                     logLevel          = LogLevel.Information
     )
     : SubscriptionFixtureBase<MsSqlContainer, TSubscription, TSubscriptionOptions, SqlServerCheckpointStore, TEventHandler>(
         autoStart,

@@ -12,7 +12,7 @@ public class CatchUpSubscriptionFixture<TSubscription, TSubscriptionOptions, TEv
         StreamName                   streamName,
         bool                         autoStart         = true,
         Action<IServiceCollection>?  configureServices = null,
-        LogLevel                     logLevel          = LogLevel.Debug
+        LogLevel                     logLevel          = LogLevel.Information
     ) : SubscriptionFixtureBase<EventStoreDbContainer, TSubscription, TSubscriptionOptions, TestCheckpointStore, TEventHandler>(autoStart, logLevel)
     where TSubscription : EventStoreCatchUpSubscriptionBase<TSubscriptionOptions>
     where TSubscriptionOptions : CatchUpSubscriptionOptions

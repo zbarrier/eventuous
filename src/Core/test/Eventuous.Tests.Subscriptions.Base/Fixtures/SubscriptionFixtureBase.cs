@@ -12,8 +12,7 @@ using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace Eventuous.Tests.Subscriptions.Base;
 
-public abstract class SubscriptionFixtureBase<TContainer, TSubscription, TSubscriptionOptions, TCheckpointStore, TEventHandler>
-    : StoreFixtureBase<TContainer>, IStartableFixture
+public abstract class SubscriptionFixtureBase<TContainer, TSubscription, TSubscriptionOptions, TCheckpointStore, TEventHandler> : StoreFixtureBase<TContainer>
     where TEventHandler : class, IEventHandler
     where TContainer : DockerContainer
     where TCheckpointStore : class, ICheckpointStore
@@ -22,7 +21,7 @@ public abstract class SubscriptionFixtureBase<TContainer, TSubscription, TSubscr
     readonly bool     _autoStart;
     readonly LogLevel _logLevel;
 
-    protected SubscriptionFixtureBase(bool autoStart = true, LogLevel logLevel = LogLevel.Trace) {
+    protected SubscriptionFixtureBase(bool autoStart = true, LogLevel logLevel = LogLevel.Information) {
         _autoStart = autoStart;
         _logLevel  = logLevel;
         TypeMapper.RegisterKnownEventTypes(typeof(BookingEvents.BookingImported).Assembly);
@@ -55,9 +54,7 @@ public abstract class SubscriptionFixtureBase<TContainer, TSubscription, TSubscr
             }
         );
 
-        services.AddSingleton<IMessageSubscription>(
-            sp => sp.GetSubscriptionBuilder<TSubscription, TSubscriptionOptions>(SubscriptionId).ResolveSubscription(sp)
-        );
+        services.AddSingleton<IMessageSubscription>(sp => sp.GetSubscriptionBuilder<TSubscription, TSubscriptionOptions>(SubscriptionId).ResolveSubscription(sp));
 
         var host = services.First(x => !x.IsKeyedService && x.ImplementationFactory?.GetType() == typeof(Func<IServiceProvider, SubscriptionHostedService>));
         services.Remove(host);

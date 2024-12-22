@@ -20,7 +20,7 @@ public static class LoggingExtensions {
 
     public static ILoggingBuilder AddTUnit(this ILoggingBuilder builder) => builder.AddProvider(new TUnitLoggerProvider());
     
-    public static ILoggingBuilder ForTests(this ILoggingBuilder builder, LogLevel logLevel = LogLevel.Debug) 
+    public static ILoggingBuilder ForTests(this ILoggingBuilder builder, LogLevel logLevel = LogLevel.Information) 
         => builder.AddTUnit().SetMinimumLevel(logLevel).AddFilter("Grpc", LogLevel.Warning).AddFilter("Microsoft", LogLevel.Warning);
 }
 

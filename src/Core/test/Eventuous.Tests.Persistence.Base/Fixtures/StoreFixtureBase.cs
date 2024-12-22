@@ -62,6 +62,7 @@ public abstract partial class StoreFixtureBase<TContainer> : StoreFixtureBase, I
 
         await Provider.DisposeAsync();
         await Container.DisposeAsync();
+        GC.SuppressFinalize(this);
     }
 
     protected abstract void SetupServices(IServiceCollection services);
@@ -76,7 +77,7 @@ public abstract partial class StoreFixtureBase<TContainer> : StoreFixtureBase, I
 
     bool _disposed;
 
-    public static string GetSchemaName() => NormaliseRegex().Replace(new Faker().Internet.UserName(), "").ToLower();
+    protected static string GetSchemaName() => NormaliseRegex().Replace(new Faker().Internet.UserName(), "").ToLower();
 
 #if NET8_0_OR_GREATER
     [GeneratedRegex(@"[\.\-\s]")]

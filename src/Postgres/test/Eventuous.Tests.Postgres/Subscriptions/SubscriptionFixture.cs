@@ -13,12 +13,9 @@ public class SubscriptionFixture<TSubscription, TSubscriptionOptions, TEventHand
         Action<TSubscriptionOptions> configureOptions,
         bool                         autoStart         = true,
         Action<IServiceCollection>?  configureServices = null,
-        LogLevel                     logLevel          = LogLevel.Debug
+        LogLevel                     logLevel          = LogLevel.Information
     )
-    : SubscriptionFixtureBase<PostgreSqlContainer, TSubscription, TSubscriptionOptions, PostgresCheckpointStore, TEventHandler>(
-        autoStart,
-        logLevel
-    )
+    : SubscriptionFixtureBase<PostgreSqlContainer, TSubscription, TSubscriptionOptions, PostgresCheckpointStore, TEventHandler>(autoStart, logLevel)
     where TSubscription : PostgresSubscriptionBase<TSubscriptionOptions>
     where TSubscriptionOptions : PostgresSubscriptionBaseOptions
     where TEventHandler : class, IEventHandler {
@@ -26,8 +23,7 @@ public class SubscriptionFixture<TSubscription, TSubscriptionOptions, TEventHand
 
     protected override PostgreSqlContainer CreateContainer() => PostgresContainer.Create();
 
-    protected override PostgresCheckpointStore GetCheckpointStore(IServiceProvider sp)
-        => sp.GetRequiredService<PostgresCheckpointStore>();
+    protected override PostgresCheckpointStore GetCheckpointStore(IServiceProvider sp) => sp.GetRequiredService<PostgresCheckpointStore>();
 
     protected override void ConfigureSubscription(TSubscriptionOptions options) {
         options.Schema = SchemaName;

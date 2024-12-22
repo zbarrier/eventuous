@@ -80,14 +80,7 @@ public class TestProjector : PostgresProjector {
         var insert = $"insert into {schemaInfo.Schema}.bookings (booking_id, checkin_date, price) values (@booking_id, @checkin_date, @price)";
 
         On<BookingEvents.BookingImported>(
-            (connection, ctx) =>
-                Project(
-                    connection,
-                    insert,
-                    new NpgsqlParameter("@booking_id", ctx.Stream.GetId()),
-                    new NpgsqlParameter("@checkin_date", ctx.Message.CheckIn.ToDateTimeUnspecified()),
-                    new NpgsqlParameter("@price", ctx.Message.Price)
-                )
+            (connection, ctx) => Project(connection, insert, ("@booking_id", ctx.Stream.GetId()), ("@checkin_date", ctx.Message.CheckIn.ToDateTimeUnspecified()), ("@price", ctx.Message.Price))
         );
     }
 }

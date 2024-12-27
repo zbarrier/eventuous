@@ -10,7 +10,8 @@ jobs:
   nuget:
     runs-on: self-hosted
 #    runs-on: ubuntu-latest
-
+    env:
+      DOTNET_INSTALL_DIR: ${{ github.workspace }}/.dotnet
     steps:
       -
         name: Setup Python

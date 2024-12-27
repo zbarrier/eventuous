@@ -16,7 +16,7 @@ public class StreamSubscriptionWithLinksTests : StoreFixture {
     readonly List<Checkpoint> _checkpoints = [];
     readonly string           _prefix      = $"{Faker.Commerce.ProductAdjective()}{Faker.Commerce.Product()}";
 
-    public StreamSubscriptionWithLinksTests() {
+    public StreamSubscriptionWithLinksTests() : base(LogLevel.Information) {
         AutoStart = false;
         TypeMapper.AddType<TestEvent>(TestEvent.TypeName);
     }

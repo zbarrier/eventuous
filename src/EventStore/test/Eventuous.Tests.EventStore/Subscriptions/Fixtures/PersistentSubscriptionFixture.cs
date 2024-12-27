@@ -19,7 +19,7 @@ public class PersistentSubscriptionFixture<TSubscription, TOptions, THandler>(
     public    THandler           Handler      { get; }              = handler;
     public    EventStoreProducer Producer     { get; private set; } = null!;
     protected ILogger            Log          { get; set; }         = null!;
-    protected StoreFixture       Fixture      { get; }              = new();
+    protected StoreFixture       Fixture      { get; }              = new(logLevel);
     TSubscription                Subscription { get; set; }         = null!;
 
     public ValueTask Start() => Subscription.SubscribeWithLog(Log);

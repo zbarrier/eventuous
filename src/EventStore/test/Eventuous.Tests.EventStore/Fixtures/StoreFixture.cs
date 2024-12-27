@@ -19,7 +19,11 @@ public class StoreFixture : StoreFixtureBase<EventStoreDbContainer> {
 
     static StoreFixture() => AppContext.SetSwitch("System.Net.SocketsHttpHandler.Http2FlowControl.DisableDynamicWindowSizing", true);
 
-    public StoreFixture() => ActivitySource.AddActivityListener(_listener);
+    public StoreFixture() : this(LogLevel.Information) { }
+
+    public StoreFixture(LogLevel logLevel) : base(logLevel) {
+        ActivitySource.AddActivityListener(_listener);
+    }
 
     protected override void SetupServices(IServiceCollection services) {
         services.AddEventStoreClient(Container.GetConnectionString());

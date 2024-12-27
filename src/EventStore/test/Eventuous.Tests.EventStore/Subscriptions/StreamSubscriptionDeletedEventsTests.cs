@@ -16,7 +16,7 @@ public sealed class StreamSubscriptionDeletedEventsTests {
     readonly LoggingEventListener _listener;
 
     public StreamSubscriptionDeletedEventsTests() {
-        _fixture       = new();
+        _fixture       = new(LogLevel.Information);
         _loggerFactory = LoggingExtensions.GetLoggerFactory();
         _listener      = new(_loggerFactory);
         _fixture.TypeMapper.RegisterKnownEventTypes(typeof(BookingEvents.BookingImported).Assembly);

@@ -6,7 +6,7 @@ using Testcontainers.MsSql;
 
 namespace Eventuous.Tests.SqlServer.Store;
 
-public sealed class StoreFixture : StoreFixtureBase<MsSqlContainer> {
+public sealed class StoreFixture() : StoreFixtureBase<MsSqlContainer>(LogLevel.Information) {
     readonly string _schemaName = GetSchemaName();
 
     protected override void SetupServices(IServiceCollection services) {

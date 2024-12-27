@@ -14,7 +14,7 @@ public class SubscriptionIgnoredMessagesTests : StoreFixture {
     ICheckpointStore    _checkpointStore = null!;
     TestEventHandler    _handler         = null!;
 
-    public SubscriptionIgnoredMessagesTests() {
+    public SubscriptionIgnoredMessagesTests() : base(LogLevel.Information) {
         AutoStart = false;
     }
 

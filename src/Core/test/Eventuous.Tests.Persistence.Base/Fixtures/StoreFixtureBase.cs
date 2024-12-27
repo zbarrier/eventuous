@@ -2,8 +2,10 @@ using System.Text.RegularExpressions;
 using Bogus;
 using DotNet.Testcontainers.Containers;
 using Eventuous.TestHelpers;
+using Eventuous.TestHelpers.TUnit.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using TUnit.Core.Interfaces;
 
 namespace Eventuous.Tests.Persistence.Base.Fixtures;
@@ -18,7 +20,7 @@ public abstract class StoreFixtureBase {
     public           TypeMapper      TypeMapper { get; }                        = new();
 }
 
-public abstract partial class StoreFixtureBase<TContainer> : StoreFixtureBase, IStartableFixture where TContainer : DockerContainer {
+public abstract partial class StoreFixtureBase<TContainer>(LogLevel logLevel) : StoreFixtureBase, IStartableFixture where TContainer : DockerContainer {
     public virtual async Task InitializeAsync() {
         Container = CreateContainer();
         await Container.StartAsync();
@@ -28,6 +30,7 @@ public abstract partial class StoreFixtureBase<TContainer> : StoreFixtureBase, I
         Serializer = new DefaultEventSerializer(TestPrimitives.DefaultOptions, TypeMapper);
         services.AddSingleton(Serializer);
         services.AddSingleton(TypeMapper);
+        services.AddLogging(b => ConfigureLogging(b.ForTests(logLevel)).SetMinimumLevel(logLevel));
         SetupServices(services);
 
         Provider   = services.BuildServiceProvider();
@@ -43,9 +46,11 @@ public abstract partial class StoreFixtureBase<TContainer> : StoreFixtureBase, I
         var inits = Provider.GetServices<IHostedService>();
 
         foreach (var hostedService in inits) {
-            await hostedService.StartAsync(default);
+            await hostedService.StartAsync(CancellationToken.None);
         }
     }
+    
+    protected virtual ILoggingBuilder ConfigureLogging(ILoggingBuilder builder) => builder;
 
     public virtual async ValueTask DisposeAsync() {
         if (_disposed) return;
@@ -54,7 +59,7 @@ public abstract partial class StoreFixtureBase<TContainer> : StoreFixtureBase, I
         var inits = Provider.GetServices<IHostedService>();
 
         foreach (var hostedService in inits) {
-            await hostedService.StopAsync(default);
+            await hostedService.StopAsync(CancellationToken.None);
         }
 
         await Provider.DisposeAsync();

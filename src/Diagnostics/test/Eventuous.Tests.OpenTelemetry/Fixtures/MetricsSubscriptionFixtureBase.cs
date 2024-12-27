@@ -5,6 +5,7 @@ using Eventuous.Tests.OpenTelemetry.Fakes;
 using Eventuous.Tests.Persistence.Base.Fixtures;
 using Eventuous.Tests.Subscriptions.Base;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Eventuous.Tests.OpenTelemetry.Fixtures;
 
@@ -30,7 +31,7 @@ public abstract class MetricsSubscriptionFixtureBase<TContainer, TProducer, TSub
     // ReSharper disable once StaticMemberInGenericType
     static readonly KeyValuePair<string, string> DefaultTag = new("test", "foo");
 
-    protected MetricsSubscriptionFixtureBase() {
+    protected MetricsSubscriptionFixtureBase() : base(LogLevel.Information) {
         TypeMapper.RegisterKnownEventTypes(typeof(TestEvent).Assembly);
     }
 

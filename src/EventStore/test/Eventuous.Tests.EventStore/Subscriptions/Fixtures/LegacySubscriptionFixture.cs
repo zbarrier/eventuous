@@ -7,9 +7,9 @@ using LoggingExtensions = Eventuous.TestHelpers.TUnit.Logging.LoggingExtensions;
 
 namespace Eventuous.Tests.EventStore.Subscriptions.Fixtures;
 
-public abstract class LegacySubscriptionFixture<T>: IAsyncInitializer, IAsyncDisposable where T : class, IEventHandler {
+public abstract class LegacySubscriptionFixture<T> : IAsyncInitializer, IAsyncDisposable where T : class, IEventHandler {
     protected StreamName          Stream          { get; } = new($"test-{Guid.NewGuid():N}");
-    protected StoreFixture        StoreFixture    { get; } = new();
+    protected StoreFixture        StoreFixture    { get; }
     protected T                   Handler         { get; }
     protected EventStoreProducer  Producer        { get; private set; } = null!;
     protected ILogger             Log             { get; }
@@ -19,6 +19,7 @@ public abstract class LegacySubscriptionFixture<T>: IAsyncInitializer, IAsyncDis
     protected LegacySubscriptionFixture(T handler, StreamName? stream = null, LogLevel logLevel = LogLevel.Information) {
         if (stream is { } s) Stream = s;
 
+        StoreFixture  = new(logLevel);
         LoggerFactory = LoggingExtensions.GetLoggerFactory(logLevel);
         Handler       = handler;
         Log           = LoggerFactory.CreateLogger(GetType());

@@ -2,7 +2,6 @@ using DotNet.Testcontainers.Containers;
 using Eventuous.Subscriptions;
 using Eventuous.Subscriptions.Checkpoints;
 using Eventuous.Sut.Domain;
-using Eventuous.TestHelpers.TUnit.Logging;
 using Eventuous.Tests.Persistence.Base.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,11 +18,9 @@ public abstract class SubscriptionFixtureBase<TContainer, TSubscription, TSubscr
     where TSubscription : EventSubscription<TSubscriptionOptions>
     where TSubscriptionOptions : SubscriptionOptions {
     readonly bool     _autoStart;
-    readonly LogLevel _logLevel;
 
-    protected SubscriptionFixtureBase(bool autoStart = true, LogLevel logLevel = LogLevel.Information) {
+    protected SubscriptionFixtureBase(bool autoStart = true, LogLevel logLevel = LogLevel.Information) : base(logLevel) {
         _autoStart = autoStart;
-        _logLevel  = logLevel;
         TypeMapper.RegisterKnownEventTypes(typeof(BookingEvents.BookingImported).Assembly);
     }
 
@@ -58,7 +55,6 @@ public abstract class SubscriptionFixtureBase<TContainer, TSubscription, TSubscr
 
         var host = services.First(x => !x.IsKeyedService && x.ImplementationFactory?.GetType() == typeof(Func<IServiceProvider, SubscriptionHostedService>));
         services.Remove(host);
-        services.AddLogging(b => ConfigureLogging(b.ForTests(_logLevel)).SetMinimumLevel(_logLevel));
     }
 
     protected override void GetDependencies(IServiceProvider provider) {

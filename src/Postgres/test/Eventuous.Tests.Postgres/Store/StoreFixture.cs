@@ -8,7 +8,7 @@ using Testcontainers.PostgreSql;
 namespace Eventuous.Tests.Postgres.Store;
 
 // ReSharper disable once PartialTypeWithSinglePart
-public partial class StoreFixture : StoreFixtureBase<PostgreSqlContainer> {
+public partial class StoreFixture() : StoreFixtureBase<PostgreSqlContainer>(LogLevel.Information) {
     protected NpgsqlDataSource DataSource { get; private set; } = null!;
 
     readonly string _schemaName = GetSchemaName();

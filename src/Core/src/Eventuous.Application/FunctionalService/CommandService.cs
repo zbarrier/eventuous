@@ -1,6 +1,8 @@
 // Copyright (C) Eventuous HQ OÜ. All rights reserved
 // Licensed under the Apache License, Version 2.0.
 
+using Eventuous.Persistence;
+
 namespace Eventuous;
 
 using static Diagnostics.ApplicationEventSource;
@@ -84,19 +86,18 @@ public abstract class CommandService<TState>(IEventReader reader, IEventWriter w
                 _                      => throw new ArgumentOutOfRangeException(nameof(registeredHandler.ExpectedState), "Unknown expected state")
             };
 
-            var result = await registeredHandler
-                .Handler(loadedState.State, loadedState.Events, command, cancellationToken)
-                .NoContext();
+            var result = (await registeredHandler.Handler(loadedState.State, loadedState.Events, command, cancellationToken).NoContext()).ToArray();
 
-            var newEvents = result.ToArray();
+            var newEvents = result.Select(x => new ProposedEvent(x, new())).ToArray();
             var newState  = newEvents.Aggregate(loadedState.State, (current, evt) => current.When(evt));
 
             // Zero in the global position would mean nothing, so the receiver needs to check the Changes.Length
             if (newEvents.Length == 0) return Result<TState>.FromSuccess(newState, Array.Empty<Change>(), 0);
 
-            var storeResult = await resolvedWriter.Store(streamName, loadedState.StreamVersion, newEvents, Amend, cancellationToken)
-                .NoContext();
-            var changes = newEvents.Select(x => Change.FromEvent(x, _typeMap));
+            var proposed    = new ProposedAppend(streamName, loadedState.StreamVersion, newEvents);
+            var final       = registeredHandler.AmendAppend?.Invoke(proposed, command) ?? proposed;
+            var storeResult = await resolvedWriter.Store(final, Amend, cancellationToken).NoContext();
+            var changes     = result.Select(x => Change.FromEvent(x, _typeMap));
             Log.CommandHandled<TCommand>();
 
             return Result<TState>.FromSuccess(newState, changes, storeResult.GlobalPosition);
@@ -115,7 +116,5 @@ public abstract class CommandService<TState>(IEventReader reader, IEventWriter w
 
     protected static StreamName GetStream(string id) => StreamName.ForState<TState>(id);
 
-    internal void AddHandler<TCommand>(RegisteredHandler<TState> handler) where TCommand : class {
-        _handlers.AddHandlerUntyped(typeof(TCommand), handler);
-    }
+    internal void AddHandler<TCommand>(RegisteredHandler<TState> handler) where TCommand : class => _handlers.AddHandlerUntyped(typeof(TCommand), handler);
 }

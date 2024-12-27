@@ -1,6 +1,8 @@
 // Copyright (C) Eventuous HQ OÜ.All rights reserved
 // Licensed under the Apache License, Version 2.0.
 
+using Eventuous.Persistence;
+using Eventuous.Shared;
 using static Eventuous.FuncServiceDelegates;
 
 namespace Eventuous;
@@ -77,28 +79,28 @@ public interface IDefineExecution<out TCommand, out TState> where TState : State
     /// </summary>
     /// <param name="executeCommand">Function to be executed on the stream for the command</param>
     /// <returns></returns>
-    void Act(Func<TCommand, NewEvents> executeCommand);
+    IDefineAppendAmendment<TCommand> Act(Func<TCommand, NewEvents> executeCommand);
 
     /// <summary>
     /// Defines the action to take on the stream for the command. The expected state should be New for this to work.
     /// </summary>
     /// <param name="executeCommand">Function to be executed on a new stream for the command</param>
     /// <returns></returns>
-    void ActAsync(Func<TCommand, CancellationToken, Task<NewEvents>> executeCommand);
+    IDefineAppendAmendment<TCommand> ActAsync(Func<TCommand, CancellationToken, Task<NewEvents>> executeCommand);
 
     /// <summary>
     /// Defines the action to take on the stream for the command, asynchronously.
     /// </summary>
     /// <param name="executeCommand">Function to be executed on a stream for the command</param>
     /// <returns></returns>
-    void Act(Func<TState, object[], TCommand, NewEvents> executeCommand);
+    IDefineAppendAmendment<TCommand> Act(Func<TState, object[], TCommand, NewEvents> executeCommand);
 
     /// <summary>
     /// Defines the action to take on the new stream for the command, asynchronously.
     /// </summary>
     /// <param name="executeCommand">Function to be executed on a stream for the command</param>
     /// <returns></returns>
-    void ActAsync(Func<TState, object[], TCommand, CancellationToken, Task<NewEvents>> executeCommand);
+    IDefineAppendAmendment<TCommand> ActAsync(Func<TState, object[], TCommand, CancellationToken, Task<NewEvents>> executeCommand);
 }
 
 public interface IDefineStoreOrExecution<out TCommand, out TState>
@@ -120,6 +122,7 @@ public class CommandHandlerBuilder<TCommand, TState>(CommandService<TState> serv
     : IDefineExpectedState<TCommand, TState>,
         IDefineStreamName<TCommand, TState>,
         IDefineStoreOrExecution<TCommand, TState>,
+        IDefineAppendAmendment<TCommand>,
         ICommandHandlerBuilder<TCommand, TState>
     where TState : State<TState>, new() where TCommand : class {
     ExpectedState                    _expectedState = ExpectedState.Any;
@@ -128,6 +131,7 @@ public class CommandHandlerBuilder<TCommand, TState>(CommandService<TState> serv
     Func<TCommand, IEventReader>?    _reader;
     Func<TCommand, IEventWriter>?    _writer;
     AmendEvent<TCommand>?            _amendEvent;
+    RegisteredHandler<TState>?       _handler;
 
     IDefineStreamName<TCommand, TState> IDefineExpectedState<TCommand, TState>.InState(ExpectedState expectedState) {
         _expectedState = expectedState;
@@ -141,40 +145,50 @@ public class CommandHandlerBuilder<TCommand, TState>(CommandService<TState> serv
         return this;
     }
 
-    ICommandHandlerBuilder<TCommand, TState> IDefineStreamName<TCommand, TState>.GetStreamAsync(
-            Func<TCommand, CancellationToken, ValueTask<StreamName>> getStream
-        ) {
+    ICommandHandlerBuilder<TCommand, TState> IDefineStreamName<TCommand, TState>.GetStreamAsync(Func<TCommand, CancellationToken, ValueTask<StreamName>> getStream) {
         _getStream = (cmd, token) => getStream((TCommand)cmd, token);
 
         return this;
     }
 
-    void IDefineExecution<TCommand, TState>.Act(Func<TState, object[], TCommand, NewEvents> executeCommand) {
+    IDefineAppendAmendment<TCommand> IDefineExecution<TCommand, TState>.Act(Func<TState, object[], TCommand, NewEvents> executeCommand) {
         _execute = (state, events, command, _) => ValueTask.FromResult(executeCommand(state, events, (TCommand)command));
-        service.AddHandler<TCommand>(Build());
+        _handler = Build();
+        service.AddHandler<TCommand>(_handler);
+
+        return this;
     }
 
-    void IDefineExecution<TCommand, TState>.ActAsync(Func<TState, object[], TCommand, CancellationToken, Task<NewEvents>> executeCommand) {
+    IDefineAppendAmendment<TCommand> IDefineExecution<TCommand, TState>.ActAsync(Func<TState, object[], TCommand, CancellationToken, Task<NewEvents>> executeCommand) {
         _execute = async (state, events, cmd, token) => await executeCommand(state, events, (TCommand)cmd, token).NoContext();
-        service.AddHandler<TCommand>(Build());
+        _handler = Build();
+        service.AddHandler<TCommand>(_handler);
+
+        return this;
     }
 
-    void IDefineExecution<TCommand, TState>.Act(Func<TCommand, NewEvents> executeCommand) {
+    IDefineAppendAmendment<TCommand> IDefineExecution<TCommand, TState>.Act(Func<TCommand, NewEvents> executeCommand) {
         if (_expectedState != ExpectedState.New) {
             throw new InvalidOperationException("Action without state is only allowed for new streams");
         }
 
         _execute = (_, _, command, _) => ValueTask.FromResult(executeCommand((TCommand)command));
-        service.AddHandler<TCommand>(Build());
+        _handler = Build();
+        service.AddHandler<TCommand>(_handler);
+
+        return this;
     }
 
-    void IDefineExecution<TCommand, TState>.ActAsync(Func<TCommand, CancellationToken, Task<NewEvents>> executeCommand) {
+    IDefineAppendAmendment<TCommand> IDefineExecution<TCommand, TState>.ActAsync(Func<TCommand, CancellationToken, Task<NewEvents>> executeCommand) {
         if (_expectedState != ExpectedState.New) {
             throw new InvalidOperationException("Action without state is only allowed for new streams");
         }
 
         _execute = executeCommand.AsExecute<TCommand, TState>();
-        service.AddHandler<TCommand>(Build());
+        _handler = Build();
+        service.AddHandler<TCommand>(_handler);
+
+        return this;
     }
 
     IDefineWriter<TCommand, TState> IDefineReader<TCommand, TState>.ResolveReader(Func<TCommand, IEventReader> resolveReader) {
@@ -201,6 +215,10 @@ public class CommandHandlerBuilder<TCommand, TState>(CommandService<TState> serv
         _amendEvent = amendEvent;
 
         return this;
+    }
+
+    void IDefineAppendAmendment<TCommand>.AmendAppend(AmendAppend<TCommand> amendAppend) {
+        Ensure.NotNull(_handler, "Handler hasn't been built yet").AmendAppend = (append, cmd) => amendAppend(append, (TCommand)cmd);
     }
 
     RegisteredHandler<TState> Build() {

@@ -12,8 +12,6 @@ public static class EsdbContainer {
         return new EventStoreDbBuilder()
             .WithImage(image)
             .WithEnvironment("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP", "true")
-            // .WithCleanUp(false)
-            // .WithAutoRemove(false)
             .Build();
     }
 }

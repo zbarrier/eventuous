@@ -58,7 +58,7 @@ public abstract class SubscriptionFixtureBase<TContainer, TSubscription, TSubscr
 
         var host = services.First(x => !x.IsKeyedService && x.ImplementationFactory?.GetType() == typeof(Func<IServiceProvider, SubscriptionHostedService>));
         services.Remove(host);
-        services.AddLogging(b => ConfigureLogging(b.ForTests(_logLevel)));
+        services.AddLogging(b => ConfigureLogging(b.ForTests(_logLevel)).SetMinimumLevel(_logLevel));
     }
 
     protected override void GetDependencies(IServiceProvider provider) {

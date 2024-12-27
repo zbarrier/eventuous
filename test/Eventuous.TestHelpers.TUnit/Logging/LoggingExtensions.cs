@@ -1,33 +1,40 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 
 namespace Eventuous.TestHelpers.TUnit.Logging;
 
 public static class LoggingExtensions {
-    public static ILoggerFactory GetLoggerFactory(LogLevel logLevel = LogLevel.Debug)
+    public static ILoggerFactory GetLoggerFactory(LogLevel logLevel = LogLevel.Information)
         => LoggerFactory.Create(
             builder => builder
                 .SetMinimumLevel(logLevel)
                 .AddFilter("Microsoft", LogLevel.Warning)
                 .AddFilter("Grpc", LogLevel.Warning)
-                .AddTUnit()
+                .AddTUnit(logLevel)
         );
-    
-    public static ILoggerFactory AddTUnit(this ILoggerFactory factory) {
-        factory.AddProvider(new TUnitLoggerProvider());
+
+    public static ILoggerFactory AddTUnit(this ILoggerFactory factory, LogLevel logLevel) {
+        factory.AddProvider(new TUnitLoggerProvider(logLevel));
 
         return factory;
     }
 
-    public static ILoggingBuilder AddTUnit(this ILoggingBuilder builder) => builder.AddProvider(new TUnitLoggerProvider());
-    
-    public static ILoggingBuilder ForTests(this ILoggingBuilder builder, LogLevel logLevel = LogLevel.Information) 
-        => builder.AddTUnit().SetMinimumLevel(logLevel).AddFilter("Grpc", LogLevel.Warning).AddFilter("Microsoft", LogLevel.Warning);
+    public static ILoggingBuilder AddTUnit(this ILoggingBuilder builder, LogLevel logLevel) => builder.AddProvider(new TUnitLoggerProvider(logLevel));
+
+    public static ILoggingBuilder ForTests(this ILoggingBuilder builder, LogLevel logLevel = LogLevel.Information)
+        => builder
+            .AddTUnit(logLevel)
+            .SetMinimumLevel(logLevel)
+            .AddFilter("Grpc", LogLevel.Warning)
+            .AddFilter("Microsoft", LogLevel.Warning)
+            .AddFilter("Npgsql", LogLevel.Warning);
 }
 
-public sealed class TUnitLoggerProvider() : ILoggerProvider {
-    private readonly LoggerExternalScopeProvider _scopeProvider = new();
+public sealed class TUnitLoggerProvider(LogLevel logLevel) : ILoggerProvider {
+    private readonly LoggerExternalScopeProvider            _scopeProvider = new();
+    private readonly ConcurrentDictionary<string, TUnitLog> _loggers       = new(StringComparer.OrdinalIgnoreCase);
 
-    public ILogger CreateLogger(string categoryName) => new TUnitLog(_scopeProvider);
+    public ILogger CreateLogger(string categoryName) => _loggers.GetOrAdd(categoryName, name => new(_scopeProvider, name, logLevel));
 
-    public void Dispose() { }
+    public void Dispose() => _loggers.Clear();
 }

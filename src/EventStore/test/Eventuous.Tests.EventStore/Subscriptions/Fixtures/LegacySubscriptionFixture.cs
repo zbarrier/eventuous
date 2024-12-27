@@ -16,7 +16,7 @@ public abstract class LegacySubscriptionFixture<T>: IAsyncInitializer, IAsyncDis
     protected TestCheckpointStore CheckpointStore { get; }      = new();
     protected StreamSubscription  Subscription    { get; set; } = null!;
 
-    protected LegacySubscriptionFixture(T handler, StreamName? stream = null, LogLevel logLevel = LogLevel.Debug) {
+    protected LegacySubscriptionFixture(T handler, StreamName? stream = null, LogLevel logLevel = LogLevel.Information) {
         if (stream is { } s) Stream = s;
 
         LoggerFactory = LoggingExtensions.GetLoggerFactory(logLevel);

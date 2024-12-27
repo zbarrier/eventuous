@@ -16,13 +16,13 @@ public class TracesTests : LegacySubscriptionFixture<TracedHandler> {
         _listener = new() {
             ShouldListenTo = _ => true,
             Sample         = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStarted = activity => Log.LogInformation(
+            ActivityStarted = activity => Log.LogTrace(
                 "Started {Activity} with {Id}, parent {ParentId}",
                 activity.DisplayName,
                 activity.Id,
                 activity.ParentId
             ),
-            ActivityStopped = activity => Log.LogInformation("Stopped {Activity}", activity.DisplayName)
+            ActivityStopped = activity => Log.LogTrace("Stopped {Activity}", activity.DisplayName)
         };
 
         ActivitySource.AddActivityListener(_listener);

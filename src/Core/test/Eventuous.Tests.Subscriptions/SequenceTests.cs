@@ -8,7 +8,7 @@ namespace Eventuous.Tests.Subscriptions;
 public class SequenceTests {
     public SequenceTests() {
         var factory = new LoggerFactory();
-        factory.AddProvider(new TUnitLoggerProvider());
+        factory.AddProvider(new TUnitLoggerProvider(LogLevel.Information));
         var services = new ServiceCollection();
         services.AddSingleton<ILoggerFactory>(factory);
         var provider = services.BuildServiceProvider();

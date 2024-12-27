@@ -23,7 +23,7 @@ public static class TestContext {
                 CancellationToken.None
             )
         )
-        .RuleFor(x => x.LogContext, (_, _) => new("test", new LoggerFactory().AddTUnit()));
+        .RuleFor(x => x.LogContext, (_, _) => new("test", new LoggerFactory().AddTUnit(LogLevel.Information)));
     
     public static MessageConsumeContext CreateContext() => Auto.Generate();
 }

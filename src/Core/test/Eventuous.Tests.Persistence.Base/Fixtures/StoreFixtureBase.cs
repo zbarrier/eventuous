@@ -2,7 +2,6 @@ using System.Text.RegularExpressions;
 using Bogus;
 using DotNet.Testcontainers.Containers;
 using Eventuous.TestHelpers;
-using Eventuous.TestHelpers.TUnit.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using TUnit.Core.Interfaces;
@@ -25,8 +24,6 @@ public abstract partial class StoreFixtureBase<TContainer> : StoreFixtureBase, I
         await Container.StartAsync();
 
         var services = new ServiceCollection();
-
-        services.AddLogging(cfg => cfg.ForTests());
 
         Serializer = new DefaultEventSerializer(TestPrimitives.DefaultOptions, TypeMapper);
         services.AddSingleton(Serializer);

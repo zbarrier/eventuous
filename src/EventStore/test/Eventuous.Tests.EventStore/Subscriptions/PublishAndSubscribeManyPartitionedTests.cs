@@ -4,12 +4,7 @@ using Eventuous.Tests.Subscriptions.Base;
 
 namespace Eventuous.Tests.EventStore.Subscriptions;
 
-public class PublishAndSubscribeManyPartitionedTests() : LegacySubscriptionFixture(
-        5.Milliseconds(),
-        false,
-        new StreamName(Guid.NewGuid().ToString("N")),
-        logLevel: LogLevel.Trace
-    ) {
+public class PublishAndSubscribeManyPartitionedTests() : LegacySubscriptionFixture(5.Milliseconds(), false, new StreamName(Guid.NewGuid().ToString("N"))) {
     [Test]
     [Category("Stream catch-up subscription")]
     public async Task SubscribeAndProduceMany(CancellationToken cancellationToken) {

@@ -208,7 +208,7 @@ public class EsdbEventStore : IEventStore {
         => version == ExpectedStreamVersion.Any ? whenAny() : otherwise();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    StreamEvent ToStreamEvent(ResolvedEvent resolvedEvent) {
+    StreamEvent? ToStreamEvent(ResolvedEvent resolvedEvent) {
         var deserialized = _serializer.DeserializeEvent(
             resolvedEvent.Event.Data.Span,
             resolvedEvent.Event.EventType,
@@ -217,11 +217,14 @@ public class EsdbEventStore : IEventStore {
 
         return deserialized switch {
             SuccessfullyDeserialized success => AsStreamEvent(success.Payload),
-            FailedToDeserialize failed => throw new SerializationException(
-                $"Can't deserialize {resolvedEvent.Event.EventType}: {failed.Error}"
-            ),
+            FailedToDeserialize failed => HandleFailure(failed),
             _ => throw new SerializationException("Unknown deserialization result")
         };
+
+        StreamEvent? HandleFailure(FailedToDeserialize failed) {
+            if (resolvedEvent.Event.EventType.StartsWith('$')) return null;
+            throw new SerializationException($"Can't deserialize {resolvedEvent.Event.EventType}: {failed.Error}");
+        }
 
         Metadata? DeserializeMetadata() {
             var meta = resolvedEvent.Event.Metadata.Span;
@@ -252,8 +255,9 @@ public class EsdbEventStore : IEventStore {
 
     StreamEvent[] ToStreamEvents(ResolvedEvent[] resolvedEvents)
         => resolvedEvents
-            .Where(x => !x.Event.EventType.StartsWith('$'))
             .Select(ToStreamEvent)
+            .Where(x => x != null)
+            .Select(x => x!.Value)
             .ToArray();
 
     record ErrorInfo(string Message, params object[] Args);

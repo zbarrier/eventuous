@@ -28,6 +28,7 @@ public record struct StreamName {
     }
 
     public readonly string GetId() => Value[(Value.IndexOf('-') + 1)..];
+    public readonly string GetCategory() => Value[..Value.IndexOf('-')];
 
     public static implicit operator string(StreamName streamName) => streamName.Value;
 

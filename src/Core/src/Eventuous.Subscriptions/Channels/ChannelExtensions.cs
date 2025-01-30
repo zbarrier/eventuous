@@ -67,7 +67,7 @@ static class ChannelExtensions {
         await finalize(ts.Token).NoContext();
     }
 
-    public static async IAsyncEnumerable<T[]> ReadAllBatches<T>(
+    static async IAsyncEnumerable<T[]> ReadAllBatches<T>(
             this ChannelReader<T>                      source,
             int                                        batchSize,
             TimeSpan                                   timeSpan,

@@ -80,7 +80,7 @@ public abstract partial class CommandService<TAggregate, TState, TId>(
                     .LoadAggregate<TAggregate, TState, TId>(aggregateId, _streamNameMap, true, _factoryRegistry, cancellationToken)
                     .NoContext(),
                 ExpectedState.New     => Create(aggregateId),
-                ExpectedState.Unknown => default,
+                ExpectedState.Unknown => null,
                 _                     => throw new ArgumentOutOfRangeException(nameof(registeredHandler.ExpectedState), "Unknown expected state")
             };
 

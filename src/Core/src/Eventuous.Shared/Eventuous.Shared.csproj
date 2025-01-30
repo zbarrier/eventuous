@@ -22,4 +22,7 @@
     <ItemGroup>
         <InternalsVisibleTo Include="Benchmarks" />
     </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\Eventuous.Domain\Eventuous.Domain.csproj" />
+    </ItemGroup>
 </Project>

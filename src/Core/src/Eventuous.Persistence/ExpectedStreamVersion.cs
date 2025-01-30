@@ -8,9 +8,18 @@ public readonly record struct ExpectedStreamVersion(long Value) {
     public static readonly ExpectedStreamVersion Any      = new(-2);
 }
 
-public record struct StreamReadPosition(long Value) {
+public record struct StreamReadPosition {
+    public StreamReadPosition(long Value) {
+        if (Value < 0) throw new ArgumentOutOfRangeException(nameof(Value), "StreamReadPosition cannot be negative.");
+        this.Value = Value;
+    }
+
     public static readonly StreamReadPosition Start = new(0L);
     public static readonly StreamReadPosition End   = new(long.MaxValue);
+    public static implicit operator StreamReadPosition(long value) => new(value);
+    public long Value { get; set; }
+
+    public readonly void Deconstruct(out long value) => value = this.Value;
 }
 
 public record struct StreamTruncatePosition(long Value);

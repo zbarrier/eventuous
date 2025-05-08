@@ -314,3 +314,4 @@ version.txt
 /docs/.docusaurus/
 /docs/build/
 /docs/.yarn/
+/src/Extensions/test/Eventuous.Tests.Extensions.AspNetCore/AggregateCommandsTests.MapAggregateContractToCommandExplicitlyWithoutRouteWithGenericAttr_factory=Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1[Program].verified.txt

@@ -39,14 +39,15 @@ Producer options:
 
 When producing messages, you can supply per-message options using `ServiceBusProduceOptions`:
 
-| Option             | Description                                              |
-|--------------------|----------------------------------------------------------|
-| `Subject`          | Message subject                                          |
-| `To`               | Forward-to address                                       |
-| `ReplyTo`          | Reply-to address                                         |
-| `SessionId`        | Session id for session-enabled queues/topics             |
-| `ReplyToSessionId` | Reply-to session id                                      |
-| `TimeToLive`       | Message time-to-live, default is `TimeSpan.MaxValue`     |
+| Option                 | Description                                                        |
+|------------------------|--------------------------------------------------------------------|
+| `Subject`              | Message subject                                                    |
+| `To`                   | Forward-to address                                                 |
+| `ReplyTo`              | Reply-to address                                                   |
+| `SessionId`            | Session id for session-enabled queues/topics                       |
+| `ReplyToSessionId`     | Reply-to session id                                                |
+| `TimeToLive`           | Message time-to-live, default is `TimeSpan.MaxValue`               |
+| `ScheduledEnqueueTime` | Datetime when service bus makes the message available to receivers |
 
 Message metadata is mapped to Azure Service Bus application properties. The attribute names used for standard properties (message type, stream name, correlation id, etc.) can be customized via `ServiceBusMessageAttributeNames`.
 

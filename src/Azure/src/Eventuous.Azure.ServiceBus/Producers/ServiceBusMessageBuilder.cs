@@ -36,9 +36,12 @@ class ServiceBusMessageBuilder(
             CorrelationId = message.Metadata?.GetCorrelationId(),
             To = metadata?.GetValueOrDefault(attributes.To, options?.To)?.ToString(),
             ReplyTo = metadata?.GetValueOrDefault(attributes.ReplyTo, options?.ReplyTo)?.ToString(),
-            ReplyToSessionId = options?.ReplyToSessionId,
-            ScheduledEnqueueTime = options?.ScheduledEnqueueTime ?? default
+            ReplyToSessionId = options?.ReplyToSessionId
         };
+
+        if (options?.ScheduledEnqueueTime is {} scheduledEnqueueTime) {
+            serviceBusMessage.ScheduledEnqueueTime = scheduledEnqueueTime;
+        }
 
         // We set the SessionId only when a value is present because
         // it overrides the PartitionKey, even if the SessionId is null.

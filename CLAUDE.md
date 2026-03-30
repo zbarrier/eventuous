@@ -97,27 +97,9 @@ samples/              Sample apps (esdb, postgres, kurrentdb, banking)
 
 ## Documentation Site
 
-The `docs/` directory is an Astro + Starlight site (https://eventuous.dev). Requires Node >=20.0.0 and pnpm.
+Documentation is located in a separate repo: https://github.com/Eventuous/eventuous-docs.
 
-```bash
-cd docs
-
-# Install dependencies
-pnpm install
-
-# Local dev server with hot reload
-pnpm dev
-
-# Production build (output to docs/dist/)
-pnpm build
-
-# Serve the production build locally
-pnpm preview
-```
-
-Docs content lives in `docs/src/content/docs/` as `.md` and `.mdx` files organized by topic: `domain/`, `persistence/`, `application/`, `subscriptions/`, `read-models/`, `producers/`, `gateway/`, `diagnostics/`, and `infra/` (per-provider: esdb, postgres, mongodb, mssql, sqlite, kafka, rabbitmq, pubsub, azure-service-bus, elastic). MDX files can use Astro components. Mermaid diagrams are supported via `starlight-client-mermaid` plugin. Sidebar is auto-generated from directories in `astro.config.mjs`. Frontmatter uses Starlight format (`sidebar.order` for ordering, not `sidebar_position`).
-
-For detailed docs versioning and authoring rules, see `docs/DOCS_VERSIONING.md`.
+Changes in Eventuous code that add, remove, or change public API must be reflected in the documentation.
 
 ## Code Style
 

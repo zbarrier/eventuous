@@ -39,6 +39,10 @@ class ServiceBusMessageBuilder(
             ReplyToSessionId = options?.ReplyToSessionId
         };
 
+        if (options?.ScheduledEnqueueTime is {} scheduledEnqueueTime) {
+            serviceBusMessage.ScheduledEnqueueTime = scheduledEnqueueTime;
+        }
+
         // We set the SessionId only when a value is present because
         // it overrides the PartitionKey, even if the SessionId is null.
 

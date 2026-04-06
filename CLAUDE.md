@@ -95,11 +95,12 @@ test/                 Shared test helpers (Eventuous.Sut.App, Eventuous.Sut.Doma
 samples/              Sample apps (esdb, postgres, kurrentdb, banking)
 ```
 
-## Documentation Site
+## External Repos to Update
 
-Documentation is located in a separate repo: https://github.com/Eventuous/eventuous-docs.
+When making public API changes or adding new components, the following separate repos may need updates:
 
-Changes in Eventuous code that add, remove, or change public API must be reflected in the documentation.
+- **Documentation site**: https://github.com/Eventuous/eventuous-docs — public API additions, removals, or changes must be reflected in the docs.
+- **Claude Code plugin**: https://github.com/Eventuous/eventuous-plugin — skills and agent instructions may need updating to reflect new patterns, components, or conventions.
 
 ## Code Style
 

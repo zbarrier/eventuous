@@ -29,17 +29,17 @@ class ServiceBusMessageBuilder(
         var metadata = message.Metadata;
 
         var serviceBusMessage = new ServiceBusMessage(payload) {
-            ContentType = contentType,
-            MessageId = metadata?.GetValueOrDefault(attributes.MessageId, message.MessageId)?.ToString(),
-            Subject = metadata?.GetValueOrDefault(attributes.Subject, options?.Subject)?.ToString(),
-            TimeToLive = options?.TimeToLive ?? TimeSpan.MaxValue,
-            CorrelationId = message.Metadata?.GetCorrelationId(),
-            To = metadata?.GetValueOrDefault(attributes.To, options?.To)?.ToString(),
-            ReplyTo = metadata?.GetValueOrDefault(attributes.ReplyTo, options?.ReplyTo)?.ToString(),
+            ContentType      = contentType,
+            MessageId        = metadata?.GetValueOrDefault(attributes.MessageId, message.MessageId)?.ToString(),
+            Subject          = metadata?.GetValueOrDefault(attributes.Subject, options?.Subject)?.ToString(),
+            TimeToLive       = options?.TimeToLive ?? TimeSpan.MaxValue,
+            CorrelationId    = message.Metadata?.GetCorrelationId(),
+            To               = metadata?.GetValueOrDefault(attributes.To, options?.To)?.ToString(),
+            ReplyTo          = metadata?.GetValueOrDefault(attributes.ReplyTo, options?.ReplyTo)?.ToString(),
             ReplyToSessionId = options?.ReplyToSessionId
         };
 
-        if (options?.ScheduledEnqueueTime is {} scheduledEnqueueTime) {
+        if (options?.ScheduledEnqueueTime is { } scheduledEnqueueTime) {
             serviceBusMessage.ScheduledEnqueueTime = scheduledEnqueueTime;
         }
 

@@ -4,7 +4,7 @@ using Eventuous.Azure.ServiceBus.Shared;
 namespace Eventuous.Tests.Azure.ServiceBus;
 
 public class ConvertEventToMessage {
-    readonly Guid _messageId = Guid.NewGuid();
+    readonly Guid              _messageId = Guid.NewGuid();
     readonly ServiceBusMessage _message;
 
     public ConvertEventToMessage() {
@@ -13,10 +13,10 @@ public class ConvertEventToMessage {
             "test-stream",
             new(),
             new() {
-                Subject = "test-subject",
-                To = "test-to",
-                ReplyTo = "test-reply-to",
-                TimeToLive = TimeSpan.FromMinutes(5),
+                Subject              = "test-subject",
+                To                   = "test-to",
+                ReplyTo              = "test-reply-to",
+                TimeToLive           = TimeSpan.FromMinutes(5),
                 ScheduledEnqueueTime = new DateTimeOffset(2026, 3, 23, 16, 31, 0, TimeSpan.Zero)
             }
         );
@@ -24,13 +24,13 @@ public class ConvertEventToMessage {
         _message = builder.CreateServiceBusMessage(
             new(
                 new SomeEvent {
-                    Id = "event-id",
+                    Id   = "event-id",
                     Name = "Test Event"
                 },
                 new() {
                     [MetaTags.CorrelationId] = "correlation-id",
-                    [MetaTags.CausationId] = "causation-id",
-                    ["AAA"] = 1111
+                    [MetaTags.CausationId]   = "causation-id",
+                    ["AAA"]                  = 1111
                 },
                 new() { ["BBB"] = "12345" },
                 _messageId
@@ -97,21 +97,21 @@ public class ConvertEventToMessage {
 
         public WithMessagePropertiesInMetaData() {
             var attributeNames = new ServiceBusMessageAttributeNames();
-            var builder = new ServiceBusMessageBuilder(DefaultEventSerializer.Instance, "test-stream", attributeNames, new());
+            var builder        = new ServiceBusMessageBuilder(DefaultEventSerializer.Instance, "test-stream", attributeNames, new());
 
             _message = builder.CreateServiceBusMessage(
                 new(
                     new SomeEvent {
-                        Id = "event-id",
+                        Id   = "event-id",
                         Name = "Test Event"
                     },
                     new() {
-                        [attributeNames.MessageId] = "12345",
+                        [attributeNames.MessageId]     = "12345",
                         [attributeNames.CorrelationId] = "correlation-id",
-                        [attributeNames.CausationId] = "causation-id",
-                        [attributeNames.ReplyTo] = "test-reply-to",
-                        [attributeNames.Subject] = "test-subject",
-                        [attributeNames.To] = "test-to"
+                        [attributeNames.CausationId]   = "causation-id",
+                        [attributeNames.ReplyTo]       = "test-reply-to",
+                        [attributeNames.Subject]       = "test-subject",
+                        [attributeNames.To]            = "test-to"
                     },
                     new()
                 )

@@ -1,4 +1,4 @@
-// Copyright (C) Eventuous HQ OÜ.All rights reserved
+// Copyright (C) Eventuous HQ OÜ. All rights reserved
 // Licensed under the Apache License, Version 2.0.
 
 using Eventuous.Persistence;
@@ -30,14 +30,14 @@ public interface IDefineIdentity<out TCommand, out TAggregate, out TState, TId>
     /// </summary>
     /// <param name="getId">A function to get the aggregate id from the command.</param>
     /// <returns></returns>
-    ICommandHandlerBuilder<TCommand, TAggregate, TState, TId> GetId(Func<TCommand, TId> getId);
+    ICommandHandlerBuilder<TCommand, TAggregate, TState> GetId(Func<TCommand, TId> getId);
 
     /// <summary>
     /// Defines how the aggregate id is extracted from the command, asynchronously.
     /// </summary>
     /// <param name="getId">A function to get the aggregate id from the command.</param>
     /// <returns></returns>
-    ICommandHandlerBuilder<TCommand, TAggregate, TState, TId> GetIdAsync(Func<TCommand, CancellationToken, ValueTask<TId>> getId);
+    ICommandHandlerBuilder<TCommand, TAggregate, TState> GetIdAsync(Func<TCommand, CancellationToken, ValueTask<TId>> getId);
 }
 
 public interface IDefineStore<out TCommand, out TAggregate, out TState>
@@ -79,10 +79,9 @@ public interface IDefineWriter<out TCommand, out TAggregate, out TState>
     IDefineExecution<TCommand, TAggregate, TState> ResolveWriter(Func<TCommand, IEventWriter> resolveWriter);
 }
 
-public interface IDefineEventAmendment<out TCommand, out TAggregate, out TState, TId>
+public interface IDefineEventAmendment<out TCommand, out TAggregate, out TState>
     where TAggregate : Aggregate<TState>
     where TState : State<TState>, new()
-    where TId : Id
     where TCommand : class {
     /// <summary>
     /// Amends the event before it gets stored.
@@ -120,15 +119,14 @@ public interface IDefineStoreOrExecution<out TCommand, out TAggregate, out TStat
     where TState : State<TState>, new()
     where TCommand : class;
 
-public interface ICommandHandlerBuilder<out TCommand, out TAggregate, out TState, TId>
+public interface ICommandHandlerBuilder<out TCommand, out TAggregate, out TState>
     : IDefineStore<TCommand, TAggregate, TState>,
         IDefineReader<TCommand, TAggregate, TState>,
         IDefineWriter<TCommand, TAggregate, TState>,
         IDefineExecution<TCommand, TAggregate, TState>,
-        IDefineEventAmendment<TCommand, TAggregate, TState, TId>
+        IDefineEventAmendment<TCommand, TAggregate, TState>
     where TAggregate : Aggregate<TState>
     where TState : State<TState>, new()
-    where TId : Id
     where TCommand : class;
 
 /// <summary>
@@ -142,7 +140,7 @@ public interface ICommandHandlerBuilder<out TCommand, out TAggregate, out TState
 /// <typeparam name="TAggregate">Aggregate type</typeparam>
 /// <typeparam name="TState">State of the aggregate type</typeparam>
 /// <typeparam name="TId">Identity of the aggregate type</typeparam>
-public class CommandHandlerBuilder<TCommand, TAggregate, TState, TId>(
+public class CommandHandlerBuilder<TCommand, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TAggregate, TState, TId>(
         CommandService<TAggregate, TState, TId> service,
         IEventReader?                           reader,
         IEventWriter?                           writer
@@ -151,7 +149,7 @@ public class CommandHandlerBuilder<TCommand, TAggregate, TState, TId>(
         IDefineIdentity<TCommand, TAggregate, TState, TId>,
         IDefineStoreOrExecution<TCommand, TAggregate, TState>,
         IDefineAppendAmendment<TCommand>,
-        ICommandHandlerBuilder<TCommand, TAggregate, TState, TId>
+        ICommandHandlerBuilder<TCommand, TAggregate, TState>
     where TCommand : class
     where TAggregate : Aggregate<TState>
     where TState : State<TState>, new()
@@ -170,13 +168,13 @@ public class CommandHandlerBuilder<TCommand, TAggregate, TState, TId>(
         return this;
     }
 
-    ICommandHandlerBuilder<TCommand, TAggregate, TState, TId> IDefineIdentity<TCommand, TAggregate, TState, TId>.GetId(Func<TCommand, TId> getId) {
+    ICommandHandlerBuilder<TCommand, TAggregate, TState> IDefineIdentity<TCommand, TAggregate, TState, TId>.GetId(Func<TCommand, TId> getId) {
         _getId = (cmd, _) => ValueTask.FromResult(getId((TCommand)cmd));
 
         return this;
     }
 
-    ICommandHandlerBuilder<TCommand, TAggregate, TState, TId> IDefineIdentity<TCommand, TAggregate, TState, TId>.GetIdAsync(Func<TCommand, CancellationToken, ValueTask<TId>> getId) {
+    ICommandHandlerBuilder<TCommand, TAggregate, TState> IDefineIdentity<TCommand, TAggregate, TState, TId>.GetIdAsync(Func<TCommand, CancellationToken, ValueTask<TId>> getId) {
         _getId = (cmd, token) => getId((TCommand)cmd, token);
 
         return this;
@@ -207,7 +205,7 @@ public class CommandHandlerBuilder<TCommand, TAggregate, TState, TId>(
     }
 
     IDefineExecution<TCommand, TAggregate, TState> IDefineStore<TCommand, TAggregate, TState>.ResolveStore(Func<TCommand, IEventStore> resolveStore) {
-        Ensure.NotNull(resolveStore, nameof(resolveStore));
+        Ensure.NotNull(resolveStore);
         _reader = resolveStore;
         _writer = resolveStore;
 
@@ -226,7 +224,7 @@ public class CommandHandlerBuilder<TCommand, TAggregate, TState, TId>(
         return this;
     }
 
-    IDefineStoreOrExecution<TCommand, TAggregate, TState> IDefineEventAmendment<TCommand, TAggregate, TState, TId>.AmendEvent(AmendEvent<TCommand> amendEvent) {
+    IDefineStoreOrExecution<TCommand, TAggregate, TState> IDefineEventAmendment<TCommand, TAggregate, TState>.AmendEvent(AmendEvent<TCommand> amendEvent) {
         _amendEvent = amendEvent;
 
         return this;

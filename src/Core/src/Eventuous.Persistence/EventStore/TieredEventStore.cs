@@ -1,4 +1,4 @@
-// Copyright (C) Eventuous HQ OÜ.All rights reserved
+// Copyright (C) Eventuous HQ OÜ. All rights reserved
 // Licensed under the Apache License, Version 2.0.
 
 namespace Eventuous;
@@ -14,18 +14,29 @@ namespace Eventuous;
 public class TieredEventStore(IEventStore hotStore, IEventReader archiveReader) : IEventStore {
     readonly TieredEventReader _tieredReader = new(Ensure.NotNull(hotStore), Ensure.NotNull(archiveReader));
 
-    public Task<StreamEvent[]> ReadEvents(StreamName stream, StreamReadPosition start, int count, bool failIfNotFound, CancellationToken cancellationToken)
-        => _tieredReader.ReadEvents(stream, start, count, failIfNotFound, cancellationToken);
+    [RequiresDynamicCode(AttrConstants.DynamicSerializationMessage)]
+    [RequiresUnreferencedCode(AttrConstants.DynamicSerializationMessage)]
+    public IAsyncEnumerable<StreamEvent> ReadEvents(StreamName stream, StreamReadPosition start, int count, CancellationToken cancellationToken)
+        => _tieredReader.ReadEvents(stream, start, count, cancellationToken);
 
-    public Task<StreamEvent[]> ReadEventsBackwards(StreamName stream, StreamReadPosition start, int count, bool failIfNotFound, CancellationToken cancellationToken)
-        => _tieredReader.ReadEventsBackwards(stream, start, count, failIfNotFound, cancellationToken);
+    [RequiresDynamicCode(AttrConstants.DynamicSerializationMessage)]
+    [RequiresUnreferencedCode(AttrConstants.DynamicSerializationMessage)]
+    public IAsyncEnumerable<StreamEvent> ReadEventsBackwards(StreamName stream, StreamReadPosition start, int count, CancellationToken cancellationToken)
+        => _tieredReader.ReadEventsBackwards(stream, start, count, cancellationToken);
 
+    [RequiresDynamicCode(AttrConstants.DynamicSerializationMessage)]
+    [RequiresUnreferencedCode(AttrConstants.DynamicSerializationMessage)]
     public Task<AppendEventsResult> AppendEvents(
             StreamName                          stream,
             ExpectedStreamVersion               expectedVersion,
             IReadOnlyCollection<NewStreamEvent> events,
             CancellationToken                   cancellationToken
         ) => hotStore.AppendEvents(stream, expectedVersion, events, cancellationToken);
+
+    [RequiresDynamicCode(AttrConstants.DynamicSerializationMessage)]
+    [RequiresUnreferencedCode(AttrConstants.DynamicSerializationMessage)]
+    public Task<AppendEventsResult[]> AppendEvents(IReadOnlyCollection<NewStreamAppend> appends, CancellationToken cancellationToken)
+        => hotStore.AppendEvents(appends, cancellationToken);
 
     public async Task<bool> StreamExists(StreamName stream, CancellationToken cancellationToken = default) {
         var hotExists     = await hotStore.StreamExists(stream, cancellationToken);

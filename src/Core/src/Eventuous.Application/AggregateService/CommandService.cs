@@ -14,7 +14,7 @@ using static Diagnostics.ApplicationEventSource;
 /// <typeparam name="TState">The aggregate state type</typeparam>
 /// <typeparam name="TId">The aggregate identity type</typeparam>
 // [PublicAPI]
-public abstract partial class CommandService<TAggregate, TState, TId>(
+public abstract partial class CommandService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TAggregate, TState, TId>(
         IEventReader?             reader,
         IEventWriter?             writer,
         AggregateFactoryRegistry? factoryRegistry = null,
@@ -59,6 +59,8 @@ public abstract partial class CommandService<TAggregate, TState, TId>(
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns><see cref="Result{TState}"/> of the execution</returns>
     /// <exception cref="Exceptions.CommandHandlerNotFound{TCommand}"></exception>
+    [RequiresDynamicCode(AttrConstants.DynamicSerializationMessage)]
+    [RequiresUnreferencedCode(AttrConstants.DynamicSerializationMessage)]
     public async Task<Result<TState>> Handle<TCommand>(TCommand command, CancellationToken cancellationToken) where TCommand : class {
         if (!_handlers.TryGet<TCommand>(out var registeredHandler)) {
             Log.CommandHandlerNotFound<TCommand>();
@@ -81,13 +83,13 @@ public abstract partial class CommandService<TAggregate, TState, TId>(
                     .NoContext(),
                 ExpectedState.New     => Create(aggregateId),
                 ExpectedState.Unknown => null,
-                _                     => throw new ArgumentOutOfRangeException(nameof(registeredHandler.ExpectedState), "Unknown expected state")
+                _                     => throw new ArgumentOutOfRangeException(null, "Unknown expected state")
             };
 
             var result = await registeredHandler.Handler(aggregate!, command, cancellationToken).NoContext();
 
             // Zero in the global position would mean nothing, so the receiver needs to check the Changes.Length
-            if (result.Changes.Count == 0) return Result<TState>.FromSuccess(result.State, Array.Empty<Change>(), 0);
+            if (result.Changes.Count == 0) return Result<TState>.FromSuccess(result.State, [], 0);
 
             var proposed    = new ProposedAppend(stream, new(result.OriginalVersion), result.Changes.Select(x => new ProposedEvent(x, new())).ToArray());
             var final       = registeredHandler.AmendAppend?.Invoke(proposed, command) ?? proposed;
@@ -113,5 +115,5 @@ public abstract partial class CommandService<TAggregate, TState, TId>(
     }
 
     internal void AddHandler<TCommand>(RegisteredHandler<TAggregate, TState, TId> handler) where TCommand : class
-        => _handlers.AddHandlerUntyped(typeof(TCommand), handler);
+        => _handlers.AddHandler<TCommand>(handler);
 }

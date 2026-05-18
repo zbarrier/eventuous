@@ -19,6 +19,8 @@ public static class ProducerExtensions {
     /// <param name="cancellationToken"></param>
     /// <typeparam name="TMessage">Message typ</typeparam>
     /// <returns></returns>
+    [RequiresDynamicCode(AttrConstants.DynamicSerializationMessage)]
+    [RequiresUnreferencedCode(AttrConstants.DynamicSerializationMessage)]
     public static Task Produce<TMessage>(
             this IProducer       producer,
             StreamName           stream,
@@ -53,6 +55,8 @@ public static class ProducerExtensions {
     /// <typeparam name="TMessage">Message type</typeparam>
     /// <typeparam name="TProduceOptions"></typeparam>
     /// <returns></returns>
+    [RequiresDynamicCode(AttrConstants.DynamicSerializationMessage)]
+    [RequiresUnreferencedCode(AttrConstants.DynamicSerializationMessage)]
     public static Task Produce<TProduceOptions, TMessage>(
             this IProducer<TProduceOptions> producer,
             StreamName                      stream,
@@ -87,5 +91,5 @@ public static class ProducerExtensions {
             AcknowledgeProduce?  onAck,
             ReportFailedProduce? onNack
         )
-        => [new ProducedMessage(message, metadata, additionalHeaders) { OnAck = onAck, OnNack = onNack }];
+        => [new(message, metadata, additionalHeaders) { OnAck = onAck, OnNack = onNack }];
 }

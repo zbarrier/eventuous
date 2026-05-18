@@ -1,6 +1,8 @@
 using Eventuous.Subscriptions.Logging;
+using Eventuous.TestHelpers.TUnit;
 using Eventuous.Tests.Redis.Fixtures;
 using Eventuous.Tests.Subscriptions.Base;
+using Shouldly;
 using static Eventuous.Sut.App.Commands;
 using static Eventuous.Sut.Domain.BookingEvents;
 
@@ -31,7 +33,7 @@ public class SubscribeToAll {
         await _fixture.Handler.AssertThat().Timebox(2.Seconds()).Exactly(count).Match(x => testEvents.Contains(x)).Validate(cancellationToken);
         await _fixture.Stop();
 
-        _fixture.Handler.Count.Should().Be(10);
+        _fixture.Handler.Count.ShouldBe(10);
     }
 
     [Test]
@@ -56,7 +58,7 @@ public class SubscribeToAll {
             await _fixture.Handler.AssertCollection(2.Seconds(), [..testEvents]).Validate(cancellationToken);
             await _fixture.Stop();
 
-            _fixture.Handler.Count.Should().Be(10);
+            _fixture.Handler.Count.ShouldBe(10);
         }
     }
 
@@ -74,7 +76,7 @@ public class SubscribeToAll {
         await _fixture.Start();
         await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
         await _fixture.Stop();
-        _fixture.Handler.Count.Should().Be(0);
+        _fixture.Handler.Count.ShouldBe(0);
     }
 
     static BookingImported ToEvent(ImportBooking cmd)

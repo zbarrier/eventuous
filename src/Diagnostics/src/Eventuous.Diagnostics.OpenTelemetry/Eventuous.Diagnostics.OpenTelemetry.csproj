@@ -1,10 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsAotCompatible>true</IsAotCompatible>
+    </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="$(CoreRoot)\Eventuous.Subscriptions\Eventuous.Subscriptions.csproj"/>
         <ProjectReference Include="$(CoreRoot)\Eventuous.Application\Eventuous.Application.csproj"/>
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="OpenTelemetry.Extensions.Hosting"/>
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
     </ItemGroup>
     <ItemGroup>
         <Compile Include="$(CoreRoot)\Eventuous.Shared\Tools\Ensure.cs">

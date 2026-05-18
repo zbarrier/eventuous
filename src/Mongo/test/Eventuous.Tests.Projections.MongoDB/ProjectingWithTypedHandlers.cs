@@ -32,14 +32,13 @@ public sealed class ProjectingWithTypedHandlers(IntegrationFixture fixture)
         };
 
         var actual = await Fixture.Mongo.LoadDocument<BookingDocument>(id.ToString(), cancellationToken: cancellationToken);
-        actual.Should().Be(expected);
+        await Assert.That(actual).IsEquivalentTo(expected);
 
         await DisposeAsync();
     }
 
     public class SutProjection : MongoProjector<BookingDocument> {
-        public SutProjection(IMongoDatabase database)
-            : base(database) {
+        public SutProjection(IMongoDatabase database) : base(database) {
             On<BookingImported>(
                 stream => stream.GetId(),
                 (ctx, update) => update

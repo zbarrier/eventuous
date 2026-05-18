@@ -66,6 +66,8 @@ public abstract class CommandService<TState>(IEventReader reader, IEventWriter w
     /// <typeparam name="TCommand">Command type</typeparam>
     /// <returns><seealso cref="Result{TState}"/> instance</returns>
     /// <exception cref="ArgumentOutOfRangeException">Throws when there's no command handler was registered for the command type</exception>
+    [RequiresDynamicCode(AttrConstants.DynamicSerializationMessage)]
+    [RequiresUnreferencedCode(AttrConstants.DynamicSerializationMessage)]
     public async Task<Result<TState>> Handle<TCommand>(TCommand command, CancellationToken cancellationToken) where TCommand : class {
         if (!_handlers.TryGet<TCommand>(out var registeredHandler)) {
             Log.CommandHandlerNotFound<TCommand>();
@@ -83,16 +85,16 @@ public abstract class CommandService<TState>(IEventReader reader, IEventWriter w
                 ExpectedState.Any      => await resolvedReader.LoadState<TState>(streamName, false, cancellationToken).NoContext(),
                 ExpectedState.Existing => await resolvedReader.LoadState<TState>(streamName, true, cancellationToken).NoContext(),
                 ExpectedState.New      => new(streamName, ExpectedStreamVersion.NoStream, []),
-                _                      => throw new ArgumentOutOfRangeException(nameof(registeredHandler.ExpectedState), "Unknown expected state")
+                _                      => throw new ArgumentOutOfRangeException(null, "Unknown expected state")
             };
 
             var result = (await registeredHandler.Handler(loadedState.State, loadedState.Events, command, cancellationToken).NoContext()).ToArray();
 
             var newEvents = result.Select(x => new ProposedEvent(x, new())).ToArray();
-            var newState  = newEvents.Aggregate(loadedState.State, (current, evt) => current.When(evt));
+            var newState  = newEvents.Aggregate(loadedState.State, (current, evt) => current.When(evt.Data));
 
             // Zero in the global position would mean nothing, so the receiver needs to check the Changes.Length
-            if (newEvents.Length == 0) return Result<TState>.FromSuccess(newState, Array.Empty<Change>(), 0);
+            if (newEvents.Length == 0) return Result<TState>.FromSuccess(newState, [], 0);
 
             var proposed    = new ProposedAppend(streamName, loadedState.StreamVersion, newEvents);
             var final       = registeredHandler.AmendAppend?.Invoke(proposed, command) ?? proposed;
@@ -116,5 +118,5 @@ public abstract class CommandService<TState>(IEventReader reader, IEventWriter w
 
     protected static StreamName GetStream(string id) => StreamName.ForState<TState>(id);
 
-    internal void AddHandler<TCommand>(RegisteredHandler<TState> handler) where TCommand : class => _handlers.AddHandlerUntyped(typeof(TCommand), handler);
+    internal void AddHandler<TCommand>(RegisteredHandler<TState> handler) where TCommand : class => _handlers.AddHandler<TCommand>(handler);
 }

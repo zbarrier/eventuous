@@ -1,3 +1,5 @@
+using Eventuous.Extensions.AspNetCore.Http;
+
 namespace Eventuous.Tests.Extensions.AspNetCore.Fixture;
 
 public static class TestCommands {
@@ -5,7 +7,7 @@ public static class TestCommands {
     public const string Import1Route = "import1";
     public const string Import2Route = "import2";
     public const string ImportWrongRoute = "import-wrong";
-    
+
     public record ImportBookingHttp(string BookingId, string RoomId, LocalDate CheckIn, LocalDate CheckOut, float Price);
 
     [HttpCommand(Route = Import1Route)]
@@ -17,6 +19,14 @@ public static class TestCommands {
         : ImportBookingHttp(BookingId, RoomId, CheckIn, CheckOut, Price);
 
     [HttpCommand<BrookingState>(Route = ImportWrongRoute)]
+#pragma warning disable EVTA003
     public record ImportBookingHttp3(string BookingId, string RoomId, LocalDate CheckIn, LocalDate CheckOut, float Price)
+#pragma warning restore EVTA003
+        : ImportBookingHttp(BookingId, RoomId, CheckIn, CheckOut, Price);
+
+    [HttpCommand<BrookingState>(Route = ImportWrongRoute)]
+#pragma warning disable EVTA003
+    public record DuplicateCommand(string BookingId, string RoomId, LocalDate CheckIn, LocalDate CheckOut, float Price)
+#pragma warning restore EVTA003
         : ImportBookingHttp(BookingId, RoomId, CheckIn, CheckOut, Price);
 }

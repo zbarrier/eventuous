@@ -1,4 +1,4 @@
-// Copyright (C) Eventuous HQ OÜ.All rights reserved
+// Copyright (C) Eventuous HQ OÜ. All rights reserved
 // Licensed under the Apache License, Version 2.0.
 
 using Eventuous.Persistence;
@@ -232,13 +232,13 @@ public class CommandHandlerBuilder<TCommand, TState>(CommandService<TState> serv
         );
 
         Func<TCommand, IEventWriter> DefaultResolveWriter() {
-            ArgumentNullException.ThrowIfNull(writer, nameof(writer));
+            ArgumentNullException.ThrowIfNull(writer);
 
             return _ => writer;
         }
 
         Func<TCommand, IEventReader> DefaultResolveReader() {
-            ArgumentNullException.ThrowIfNull(reader, nameof(reader));
+            ArgumentNullException.ThrowIfNull(reader);
 
             return _ => reader;
         }

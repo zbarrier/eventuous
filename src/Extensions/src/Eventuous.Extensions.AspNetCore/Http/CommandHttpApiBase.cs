@@ -1,9 +1,9 @@
-// Copyright (C) Eventuous HQ OÜ.All rights reserved
+// Copyright (C) Eventuous HQ OÜ. All rights reserved
 // Licensed under the Apache License, Version 2.0.
 
 using Microsoft.AspNetCore.Http;
 
-namespace Eventuous.Extensions.AspNetCore;
+namespace Eventuous.Extensions.AspNetCore.Http;
 
 /// <summary>
 /// Base class for exposing commands via Web API using a controller that returns the default result.

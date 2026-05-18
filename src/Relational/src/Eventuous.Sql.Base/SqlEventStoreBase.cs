@@ -1,7 +1,8 @@
-// Copyright (C) Eventuous HQ OÜ.All rights reserved
+// Copyright (C) Eventuous HQ OÜ. All rights reserved
 // Licensed under the Apache License, Version 2.0.
 
 using System.Data.Common;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
 using Eventuous.Diagnostics;
@@ -18,8 +19,15 @@ namespace Eventuous.Sql.Base;
 /// <typeparam name="TTransaction">Database transaction type</typeparam>
 public abstract class SqlEventStoreBase<TConnection, TTransaction>(IEventSerializer? serializer, IMetadataSerializer? metaSerializer) : IEventStore
     where TConnection : DbConnection where TTransaction : DbTransaction {
-    readonly IEventSerializer    _serializer     = serializer     ?? DefaultEventSerializer.Instance;
-    readonly IMetadataSerializer _metaSerializer = metaSerializer ?? DefaultMetadataSerializer.Instance;
+    /// <summary>
+    /// Message serializer instance
+    /// </summary>
+    protected IEventSerializer Serializer { get; } = serializer ?? DefaultEventSerializer.Instance;
+
+    /// <summary>
+    /// Metadata serializer instance
+    /// </summary>
+    protected IMetadataSerializer MetaSerializer { get; } = metaSerializer ?? DefaultMetadataSerializer.Instance;
 
     const string ContentType = "application/json";
 
@@ -90,22 +98,48 @@ public abstract class SqlEventStoreBase<TConnection, TTransaction>(IEventSeriali
         );
 
     /// <inheritdoc />
-    public async Task<StreamEvent[]> ReadEvents(StreamName stream, StreamReadPosition start, int count, bool failIfNotFound, CancellationToken cancellationToken) {
-        await using var connection = await OpenConnection(cancellationToken).NoContext();
-        await using var cmd        = GetReadCommand(connection, stream, start, count);
+    [RequiresDynamicCode(Constants.DynamicSerializationMessage)]
+    [RequiresUnreferencedCode(Constants.DynamicSerializationMessage)]
+    public async IAsyncEnumerable<StreamEvent> ReadEvents(StreamName stream, StreamReadPosition start, int count, [EnumeratorCancellation] CancellationToken cancellationToken) {
+        if (count <= 0 || start == StreamReadPosition.End) yield break;
 
-        return await ReadInternal(cmd, stream, failIfNotFound, cancellationToken).NoContext();
+        var events = await ReadInternal(stream, start, count, cancellationToken).NoContext();
+
+        foreach (var evt in events) yield return evt;
     }
 
     /// <inheritdoc />
-    public async Task<StreamEvent[]> ReadEventsBackwards(StreamName stream, StreamReadPosition start, int count, bool failIfNotFound, CancellationToken cancellationToken) {
+    [RequiresDynamicCode(Constants.DynamicSerializationMessage)]
+    [RequiresUnreferencedCode(Constants.DynamicSerializationMessage)]
+    public async IAsyncEnumerable<StreamEvent> ReadEventsBackwards(StreamName stream, StreamReadPosition start, int count, [EnumeratorCancellation] CancellationToken cancellationToken) {
+        if (count <= 0) yield break;
+
+        var events = await ReadInternalBackwards(stream, start, count, cancellationToken).NoContext();
+
+        foreach (var evt in events) yield return evt;
+    }
+
+    [RequiresDynamicCode("Calls Eventuous.Sql.Base.SqlEventStoreBase<TConnection, TTransaction>.ToStreamEvent(PersistedEvent)")]
+    [RequiresUnreferencedCode("Calls Eventuous.Sql.Base.SqlEventStoreBase<TConnection, TTransaction>.ToStreamEvent(PersistedEvent)")]
+    async Task<StreamEvent[]> ReadInternal(StreamName stream, StreamReadPosition start, int count, CancellationToken cancellationToken) {
+        await using var connection = await OpenConnection(cancellationToken).NoContext();
+        await using var cmd        = GetReadCommand(connection, stream, start, count);
+
+        return await ReadFromCommand(cmd, stream, cancellationToken).NoContext();
+    }
+
+    [RequiresDynamicCode("Calls Eventuous.Sql.Base.SqlEventStoreBase<TConnection, TTransaction>.ToStreamEvent(PersistedEvent)")]
+    [RequiresUnreferencedCode("Calls Eventuous.Sql.Base.SqlEventStoreBase<TConnection, TTransaction>.ToStreamEvent(PersistedEvent)")]
+    async Task<StreamEvent[]> ReadInternalBackwards(StreamName stream, StreamReadPosition start, int count, CancellationToken cancellationToken) {
         await using var connection = await OpenConnection(cancellationToken).NoContext();
         await using var cmd        = GetReadBackwardsCommand(connection, stream, start, count);
 
-        return await ReadInternal(cmd, stream, failIfNotFound, cancellationToken).NoContext();
+        return await ReadFromCommand(cmd, stream, cancellationToken).NoContext();
     }
 
-    async Task<StreamEvent[]> ReadInternal(DbCommand cmd, StreamName stream, bool failIfNotFound, CancellationToken cancellationToken) {
+    [RequiresDynamicCode("Calls Eventuous.Sql.Base.SqlEventStoreBase<TConnection, TTransaction>.ToStreamEvent(PersistedEvent)")]
+    [RequiresUnreferencedCode("Calls Eventuous.Sql.Base.SqlEventStoreBase<TConnection, TTransaction>.ToStreamEvent(PersistedEvent)")]
+    async Task<StreamEvent[]> ReadFromCommand(DbCommand cmd, StreamName stream, CancellationToken cancellationToken) {
         try {
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).NoContext();
 
@@ -113,22 +147,18 @@ public abstract class SqlEventStoreBase<TConnection, TTransaction>(IEventSeriali
 
             return await result.Select(ToStreamEvent).ToArrayAsync(cancellationToken).NoContext();
         } catch (Exception e) {
-            if (IsStreamNotFound(e)) {
-                if (failIfNotFound) {
-                    throw new StreamNotFound(stream);
-                }
+            if (IsStreamNotFound(e)) throw new StreamNotFound(stream);
 
-                return [];
-            }
-
-            throw;
+            throw new ReadFromStreamException(stream, e);
         }
     }
 
+    [RequiresDynamicCode("Calls Eventuous.IEventSerializer.DeserializeEvent(ReadOnlySpan<Byte>, String, String)")]
+    [RequiresUnreferencedCode("Calls Eventuous.IEventSerializer.DeserializeEvent(ReadOnlySpan<Byte>, String, String)")]
     StreamEvent ToStreamEvent(PersistedEvent evt) {
-        var deserialized = _serializer.DeserializeEvent(Encoding.UTF8.GetBytes(evt.JsonData), evt.MessageType, ContentType);
+        var deserialized = Serializer.DeserializeEvent(Encoding.UTF8.GetBytes(evt.JsonData), evt.MessageType, ContentType);
 
-        var meta = evt.JsonMetadata == null ? new Metadata() : _metaSerializer.Deserialize(Encoding.UTF8.GetBytes(evt.JsonMetadata!));
+        var meta = evt.JsonMetadata == null ? new() : MetaSerializer.Deserialize(Encoding.UTF8.GetBytes(evt.JsonMetadata!));
 
         return deserialized switch {
             SuccessfullyDeserialized success => AsStreamEvent(success.Payload),
@@ -136,11 +166,13 @@ public abstract class SqlEventStoreBase<TConnection, TTransaction>(IEventSeriali
             _                                => throw new("Unknown deserialization result")
         };
 
-        StreamEvent AsStreamEvent(object payload) => new(evt.MessageId, payload, meta ?? new Metadata(), ContentType, evt.StreamPosition);
+        StreamEvent AsStreamEvent(object payload) => new(evt.MessageId, payload, meta ?? new Metadata(), ContentType, evt.StreamPosition, evt.Created);
     }
 
     /// <inheritdoc />
-    public async Task<AppendEventsResult> AppendEvents(
+    [RequiresDynamicCode(Constants.DynamicSerializationMessage)]
+    [RequiresUnreferencedCode(Constants.DynamicSerializationMessage)]
+    public virtual async Task<AppendEventsResult> AppendEvents(
             StreamName                          stream,
             ExpectedStreamVersion               expectedVersion,
             IReadOnlyCollection<NewStreamEvent> events,
@@ -170,9 +202,58 @@ public abstract class SqlEventStoreBase<TConnection, TTransaction>(IEventSeriali
             throw IsConflict(e) ? new AppendToStreamException(stream, e) : e;
         }
 
+        [RequiresUnreferencedCode("Calls Eventuous.IEventSerializer.SerializeEvent(Object)")]
+        [RequiresDynamicCode("Calls Eventuous.IEventSerializer.SerializeEvent(Object)")]
         NewPersistedEvent Convert(NewStreamEvent evt) {
-            var data = _serializer.SerializeEvent(evt.Payload!);
-            var meta = _metaSerializer.Serialize(evt.Metadata);
+            var data = Serializer.SerializeEvent(evt.Payload!);
+            var meta = MetaSerializer.Serialize(evt.Metadata);
+
+            return new(evt.Id, data.EventType, AsString(data.Payload), AsString(meta));
+        }
+
+        string AsString(ReadOnlySpan<byte> bytes) => Encoding.UTF8.GetString(bytes);
+    }
+
+    /// <inheritdoc />
+    [RequiresDynamicCode(Constants.DynamicSerializationMessage)]
+    [RequiresUnreferencedCode(Constants.DynamicSerializationMessage)]
+    public virtual async Task<AppendEventsResult[]> AppendEvents(IReadOnlyCollection<NewStreamAppend> appends, CancellationToken cancellationToken) {
+        if (appends.Count == 0) return [];
+
+        await using var connection  = await OpenConnection(cancellationToken).NoContext();
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken).NoContext();
+
+        try {
+            var results = new AppendEventsResult[appends.Count];
+            var i       = 0;
+
+            foreach (var append in appends) {
+                var persistedEvents = append.Events.Where(x => x.Payload != null).Select(Convert).ToArray();
+
+                await using var cmd = GetAppendCommand(connection, (TTransaction)transaction, append.StreamName, append.ExpectedVersion, persistedEvents);
+
+                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).NoContext();
+                await reader.ReadAsync(cancellationToken).NoContext();
+                results[i++] = new((ulong)reader.GetInt64(1), reader.GetInt32(0));
+            }
+
+            await transaction.CommitAsync(cancellationToken).NoContext();
+
+            return results;
+        } catch (Exception e) {
+            await transaction.RollbackAsync(cancellationToken).NoContext();
+
+            var streamNames = string.Join(", ", appends.Select(a => a.StreamName.ToString()));
+            PersistenceEventSource.Log.UnableToAppendEvents(streamNames, e);
+
+            throw IsConflict(e) ? new AppendToStreamException(streamNames, e) : e;
+        }
+
+        [RequiresUnreferencedCode("Calls Eventuous.IEventSerializer.SerializeEvent(Object)")]
+        [RequiresDynamicCode("Calls Eventuous.IEventSerializer.SerializeEvent(Object)")]
+        NewPersistedEvent Convert(NewStreamEvent evt) {
+            var data = Serializer.SerializeEvent(evt.Payload!);
+            var meta = MetaSerializer.Serialize(evt.Metadata);
 
             return new(evt.Id, data.EventType, AsString(data.Payload), AsString(meta));
         }
@@ -187,7 +268,7 @@ public abstract class SqlEventStoreBase<TConnection, TTransaction>(IEventSeriali
 
         var result = await cmd.ExecuteScalarAsync(cancellationToken).NoContext();
 
-        return (bool)result!;
+        return Convert.ToBoolean(result);
     }
 
     /// <inheritdoc />

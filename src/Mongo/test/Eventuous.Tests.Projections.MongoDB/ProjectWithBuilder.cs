@@ -1,7 +1,9 @@
 using Eventuous.Projections.MongoDB;
 using Eventuous.Projections.MongoDB.Tools;
+using Eventuous.Subscriptions.Consumers;
 using Eventuous.Sut.Domain;
 using Eventuous.Tests.Projections.MongoDB.Fixtures;
+using JetBrains.Annotations;
 using MongoDB.Driver;
 using static Eventuous.Sut.Domain.BookingEvents;
 
@@ -32,13 +34,11 @@ public class ProjectWithBuilder(IntegrationFixture fixture) {
             StreamPosition = (ulong)first.Append.NextExpectedVersion
         };
 
-        first.Doc.Should().BeEquivalentTo(expected);
+        await Assert.That(first.Doc).IsEquivalentTo(expected);
 
         var payment = new BookingPaymentRegistered(Guid.NewGuid().ToString(), evt.Price);
 
         var second = await Act(projectionFixture, stream, payment);
-
-        await projectionFixture.DisposeAsync();
 
         expected = expected with {
             PaidAmount = payment.AmountPaid,
@@ -46,9 +46,20 @@ public class ProjectWithBuilder(IntegrationFixture fixture) {
             StreamPosition = (ulong)second.Append.NextExpectedVersion
         };
 
-        second.Doc.Should().BeEquivalentTo(expected);
-    }
+        await Assert.That(second.Doc).IsEquivalentTo(expected);
 
+        var cancellation = new BookingCancelled();
+
+        var third = await Act(projectionFixture, stream, cancellation);
+
+        await projectionFixture.DisposeAsync();
+
+        await Assert.That(third.Doc).IsNull();
+        
+        // Extra test to make sure that generated context conversions were used
+        await Assert.That(MessageConsumeContextConverter.ConversionCache).IsEmpty();
+    }
+    
     static async Task<(AppendEventsResult Append, BookingDocument? Doc)> Act<T>(ProjectionTestBase<SutProjection> f, StreamName stream, T evt) where T : class {
         var append = await f.Fixture.AppendEvent(stream, evt);
         await f.WaitForPosition(append.GlobalPosition);
@@ -57,7 +68,8 @@ public class ProjectWithBuilder(IntegrationFixture fixture) {
         return (append, actual);
     }
 
-    public class SutProjection : MongoProjector<BookingDocument> {
+    [UsedImplicitly]
+    class SutProjection : MongoProjector<BookingDocument> {
         public SutProjection(IMongoDatabase database) : base(database) {
             On<BookingImported>(
                 b => b
@@ -90,6 +102,8 @@ public class ProjectWithBuilder(IntegrationFixture fixture) {
                     .DefaultId()
                     .Update((evt, update) => update.Set(x => x.PaidAmount, evt.AmountPaid))
             );
+
+            On<BookingCancelled>(b => b.DeleteOne.DefaultId());
         }
     }
 }

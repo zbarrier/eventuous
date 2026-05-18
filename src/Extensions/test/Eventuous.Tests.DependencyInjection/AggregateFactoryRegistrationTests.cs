@@ -1,8 +1,11 @@
-﻿using Eventuous.Tests.AspNetCore.Sut;
+﻿using Eventuous.Tests.DependencyInjection.Sut;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Shouldly;
+using TestDependency = Eventuous.Tests.DependencyInjection.Sut.TestDependency;
+using TestState = Eventuous.Tests.DependencyInjection.Sut.TestState;
 
-namespace Eventuous.Tests.AspNetCore;
+namespace Eventuous.Tests.DependencyInjection;
 
 public class AggregateFactoryRegistrationTests {
     readonly AggregateFactoryRegistry _registry;
@@ -17,24 +20,24 @@ public class AggregateFactoryRegistrationTests {
     [Test]
     public void ShouldCreateNewAggregateWithExplicitFunction() {
         var instance = _registry.CreateInstance<TestAggregate, TestState>();
-        instance.Should().BeOfType<TestAggregate>();
-        instance.Dependency.Should().NotBeNull();
-        instance.State.Should().NotBeNull();
+        instance.ShouldBeOfType<TestAggregate>();
+        instance.Dependency.ShouldNotBeNull();
+        instance.State.ShouldNotBeNull();
     }
 
     [Test]
     public void ShouldCreateNewAggregateByResolve() {
         var instance = _registry.CreateInstance<AnotherTestAggregate, TestState>();
-        instance.Should().BeOfType<AnotherTestAggregate>();
-        instance.Dependency.Should().NotBeNull();
-        instance.State.Should().NotBeNull();
+        instance.ShouldBeOfType<AnotherTestAggregate>();
+        instance.Dependency.ShouldNotBeNull();
+        instance.State.ShouldNotBeNull();
     }
 
     [Test]
     public void ShouldCreateTwoSeparateInstances() {
         var instance1 = _registry.CreateInstance<AnotherTestAggregate, TestState>();
         var instance2 = _registry.CreateInstance<AnotherTestAggregate, TestState>();
-        instance1.Should().NotBeSameAs(instance2);
+        instance1.ShouldNotBeSameAs(instance2);
     }
 
     static WebApplicationBuilder BuildHost() {

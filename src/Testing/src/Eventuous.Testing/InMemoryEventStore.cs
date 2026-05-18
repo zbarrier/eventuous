@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 
 namespace Eventuous.Testing;
 
@@ -22,18 +23,44 @@ public class InMemoryEventStore : IEventStore {
         ) {
         var existing = _storage.GetOrAdd(stream, s => new(s));
         existing.AppendEvents(expectedVersion, events);
-        _global.AddRange(events.Select((x, i) => new StreamEvent(x.Id, x.Payload, x.Metadata, "application/json", _global.Count + i)));
+        var now = DateTime.UtcNow;
+        _global.AddRange(events.Select((x, i) => new StreamEvent(x.Id, x.Payload, x.Metadata, "application/json", _global.Count + i, now)));
 
         return Task.FromResult(new AppendEventsResult((ulong)(_global.Count - 1), existing.Version));
     }
 
     /// <inheritdoc />
-    public Task<StreamEvent[]> ReadEvents(StreamName stream, StreamReadPosition start, int count, bool failIfNotFound, CancellationToken cancellationToken)
-        => Task.FromResult(FindStream(stream, failIfNotFound).GetEvents(start, count).ToArray());
+    public Task<AppendEventsResult[]> AppendEvents(IReadOnlyCollection<NewStreamAppend> appends, CancellationToken cancellationToken) {
+        var results = new AppendEventsResult[appends.Count];
+        var i       = 0;
+
+        foreach (var append in appends) {
+            var now      = DateTime.UtcNow;
+            var existing = _storage.GetOrAdd(append.StreamName, s => new(s));
+            existing.AppendEvents(append.ExpectedVersion, append.Events);
+            _global.AddRange(append.Events.Select((x, j) => new StreamEvent(x.Id, x.Payload, x.Metadata, "application/json", _global.Count + j, now)));
+            results[i++] = new((ulong)(_global.Count - 1), existing.Version);
+        }
+
+        return Task.FromResult(results);
+    }
 
     /// <inheritdoc />
-    public Task<StreamEvent[]> ReadEventsBackwards(StreamName stream, StreamReadPosition start, int count, bool failIfNotFound, CancellationToken cancellationToken)
-        => Task.FromResult(FindStream(stream, failIfNotFound).GetEventsBackwards(start, count).ToArray());
+#pragma warning disable CS1998 // Async method lacks 'await' operators
+    // ReSharper disable once AsyncMethodWithoutAwait
+    public async IAsyncEnumerable<StreamEvent> ReadEvents(StreamName stream, StreamReadPosition start, int count, [EnumeratorCancellation] CancellationToken cancellationToken) {
+        foreach (var evt in FindStream(stream, true).GetEvents(start, count)) {
+            yield return evt;
+        }
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<StreamEvent> ReadEventsBackwards(StreamName stream, StreamReadPosition start, int count, [EnumeratorCancellation] CancellationToken cancellationToken) {
+        foreach (var evt in FindStream(stream, true).GetEventsBackwards(start, count)) {
+            yield return evt;
+        }
+    }
+#pragma warning restore CS1998
 
     /// <inheritdoc />
     public Task TruncateStream(
@@ -57,17 +84,12 @@ public class InMemoryEventStore : IEventStore {
     }
 
     // ReSharper disable once ReturnTypeCanBeEnumerable.Local
-    InMemoryStream FindStream(StreamName stream, bool failIfNotFound) {
-        if (!_storage.TryGetValue(stream, out var existing)) {
-            if (failIfNotFound) {
-                throw new StreamNotFound(stream);
-            }
-
-            return new(stream);
-        }
-
-        return existing!;
-    }
+    InMemoryStream FindStream(StreamName stream, bool failIfNotFound)
+        => !_storage.TryGetValue(stream, out var existing)
+            ? failIfNotFound
+                ? throw new StreamNotFound(stream)
+                : new(stream)
+            : existing;
 }
 
 record StoredEvent(StreamEvent Event, int Position);
@@ -87,7 +109,7 @@ class InMemoryStream(StreamName name) {
 
         foreach (var newEvent in events) {
             var version     = ++Version;
-            var streamEvent = new StreamEvent(newEvent.Id, newEvent.Payload, newEvent.Metadata, "application/json", version);
+            var streamEvent = new StreamEvent(newEvent.Id, newEvent.Payload, newEvent.Metadata, "application/json", version, DateTime.UtcNow);
             _events.Add(new(streamEvent, version));
         }
     }
@@ -97,7 +119,7 @@ class InMemoryStream(StreamName name) {
 
         if (count > 0) selected = selected.Take(count);
 
-        return selected.Select(x => x.Event with { Position = x.Position });
+        return selected.Select(x => x.Event with { Revision = x.Position });
     }
 
     public IEnumerable<StreamEvent> GetEventsBackwards(StreamReadPosition from, int count) {

@@ -1,6 +1,8 @@
 // Copyright (C) Eventuous HQ OÜ. All rights reserved
 // Licensed under the Apache License, Version 2.0.
 
+using System.Runtime.CompilerServices;
+
 namespace Eventuous.ElasticSearch.Store;
 
 public class ElasticEventStore(IElasticClient client, ElasticEventStoreOptions? options = null) : IEventStore {
@@ -31,12 +33,12 @@ public class ElasticEventStore(IElasticClient client, ElasticEventStoreOptions? 
                 (ulong)position + 1,
                 evt.Payload,
                 evt.Metadata.ToHeaders(),
-                DateTime.Now
+                DateTime.UtcNow
             );
     }
 
-    public async Task<StreamEvent[]> ReadEvents(StreamName stream, StreamReadPosition start, int count, bool failIfNotFound, CancellationToken cancellationToken) {
-        var response = await ReadEvents(
+    public async IAsyncEnumerable<StreamEvent> ReadEvents(StreamName stream, StreamReadPosition start, int count, [EnumeratorCancellation] CancellationToken cancellationToken) {
+        var response = await ReadEventsInternal(
             q => q.Bool(
                 b => b.Must(
                     mu => mu.Term(x => x.Stream, stream.ToString()),
@@ -47,11 +49,15 @@ public class ElasticEventStore(IElasticClient client, ElasticEventStoreOptions? 
             cancellationToken
         );
 
-        return response.Length == 0 && failIfNotFound ? throw new StreamNotFound(stream) : response;
+        if (response.Length == 0 && !await StreamExists(stream, cancellationToken)) {
+            throw new StreamNotFound(stream);
+        }
+
+        foreach (var evt in response) yield return evt;
     }
 
-    public async Task<StreamEvent[]> ReadEventsBackwards(StreamName stream, StreamReadPosition start, int count, bool failIfNotFound, CancellationToken cancellationToken) {
-        var response = await ReadEvents(
+    public async IAsyncEnumerable<StreamEvent> ReadEventsBackwards(StreamName stream, StreamReadPosition start, int count, [EnumeratorCancellation] CancellationToken cancellationToken) {
+        var response = await ReadEventsInternal(
             q => q.Bool(
                 b => b.Must(
                     mu => mu.Term(x => x.Stream, stream.ToString()),
@@ -62,11 +68,15 @@ public class ElasticEventStore(IElasticClient client, ElasticEventStoreOptions? 
             cancellationToken
         );
 
-        return response.Length == 0 && failIfNotFound ? throw new StreamNotFound(stream) : response.OrderByDescending(x => x.Position).ToArray();
+        if (response.Length == 0 && !await StreamExists(stream, cancellationToken)) {
+            throw new StreamNotFound(stream);
+        }
+
+        foreach (var evt in response.OrderByDescending(x => x.Revision)) yield return evt;
     }
 
     public async Task<bool> StreamExists(StreamName stream, CancellationToken cancellationToken) {
-        var response = await ReadEvents(
+        var response = await ReadEventsInternal(
             q => q.Bool(b => b.Must(mu => mu.Term(x => x.Stream, stream.ToString()))),
             1,
             cancellationToken
@@ -75,7 +85,7 @@ public class ElasticEventStore(IElasticClient client, ElasticEventStoreOptions? 
         return response.Length == 1;
     }
 
-    async Task<StreamEvent[]> ReadEvents(Func<QueryContainerDescriptor<PersistedEvent>, QueryContainer> query, int count, CancellationToken cancellationToken) {
+    async Task<StreamEvent[]> ReadEventsInternal(Func<QueryContainerDescriptor<PersistedEvent>, QueryContainer> query, int count, CancellationToken cancellationToken) {
         var response = await client.SearchAsync<PersistedEvent>(d => d.Index(_options.IndexName).Query(query).Take(count), cancellationToken);
 
         if (!response.IsValid) throw new ApplicationException($"Unable to read events: {response.DebugInformation}");
@@ -87,7 +97,8 @@ public class ElasticEventStore(IElasticClient client, ElasticEventStoreOptions? 
                     x.Message,
                     Metadata.FromHeaders(x.Metadata),
                     x.ContentType,
-                    x.StreamPosition
+                    x.StreamPosition,
+                    x.Created
                 )
             )
             .ToArray();

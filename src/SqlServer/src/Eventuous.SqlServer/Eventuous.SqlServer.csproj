@@ -7,7 +7,6 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.Data.SqlClient"/>
         <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
-        <PackageReference Include="System.Linq.Async"/>
         <Using Include="Microsoft.Data.SqlClient"/>
         <Using Include="System.Data"/>
     </ItemGroup>

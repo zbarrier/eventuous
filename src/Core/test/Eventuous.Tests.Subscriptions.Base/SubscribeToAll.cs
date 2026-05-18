@@ -15,6 +15,20 @@ public abstract class SubscribeToAllBase<TContainer, TSubscription, TSubscriptio
     where TSubscription : EventSubscription<TSubscriptionOptions>
     where TSubscriptionOptions : SubscriptionOptions
     where TCheckpointStore : class, ICheckpointStore {
+    protected async Task ShouldStartConsumptionFromEnd(CancellationToken cancellationToken) {
+        const int count = 10;
+
+        await GenerateAndHandleCommands(count);
+        await fixture.StartSubscription();
+        await fixture.Handler.AssertCollection(TimeSpan.FromSeconds(2), []).Validate(cancellationToken);
+
+        var commands   = await GenerateAndHandleCommands(count);
+        var testEvents = commands.Select(ToEvent).ToList();
+
+        await fixture.Handler.AssertCollection(TimeSpan.FromSeconds(2), [..testEvents]).Validate(cancellationToken);
+        await fixture.StopSubscription();
+    }
+
     protected async Task ShouldConsumeProducedEvents(CancellationToken cancellationToken) {
         const int count = 10;
 
@@ -59,7 +73,7 @@ public abstract class SubscribeToAllBase<TContainer, TSubscription, TSubscriptio
         await fixture.CheckpointStore.StoreCheckpoint(new(fixture.SubscriptionId, last), true, cancellationToken);
 
         var l = await fixture.CheckpointStore.GetLastCheckpoint(fixture.SubscriptionId, cancellationToken);
-        TestContext.Current?.OutputWriter.WriteLine("Last checkpoint: {0}", l.Position!);
+        WriteLine("Last checkpoint: {0}", l.Position!);
 
         await fixture.StartSubscription();
         await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);

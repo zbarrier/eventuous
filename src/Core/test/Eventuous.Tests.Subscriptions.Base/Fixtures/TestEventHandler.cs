@@ -14,10 +14,10 @@ namespace Eventuous.Tests.Subscriptions.Base;
 public record TestEvent(string Data, int Number) {
     public const string TypeName = "test-event";
 
-    static readonly Faker<TestEvent> Faker = new Faker<TestEvent>().CustomInstantiator(f => new TestEvent(f.Lorem.Sentence(), f.Random.Int()));
-    
+    static readonly Faker<TestEvent> Faker = new Faker<TestEvent>().CustomInstantiator(f => new(f.Lorem.Sentence(), f.Random.Int()));
+
     public static TestEvent Create() => Faker.Generate();
-    
+
     public static List<TestEvent> CreateMany(int count) => Faker.Generate(count);
 }
 

@@ -1,6 +1,6 @@
 <Project>
     <PropertyGroup>
-        <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
+        <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
         <LangVersion>preview</LangVersion>
         <NoWarn>$(NoWarn);CS1591;CS0618;</NoWarn>
         <Nullable>enable</Nullable>
@@ -10,10 +10,11 @@
         <CoreRoot>$(SrcRoot)\Core\src</CoreRoot>
         <CoreTestRoot>$(SrcRoot)\Core\test</CoreTestRoot>
         <DiagRoot>$(SrcRoot)\Diagnostics\src</DiagRoot>
-        <EsdbRoot>$(SrcRoot)\EventStore\src</EsdbRoot>
+        <KurrentDBRoot>$(SrcRoot)\KurrentDB\src</KurrentDBRoot>
         <ExtRoot>$(SrcRoot)\Extensions\src</ExtRoot>
         <GatewayRoot>$(SrcRoot)\Shovel\src</GatewayRoot>
         <LocalRoot>..\..\src</LocalRoot>
+        <LocalGenRoot>..\..\gen</LocalGenRoot>
         <Configurations>Debug;Release;Debug CI</Configurations>
         <Platforms>AnyCPU</Platforms>
     </PropertyGroup>
@@ -23,12 +24,8 @@
     </PropertyGroup>
     <Import Project="$(RepoRoot)\props\Common.props"/>
     <PropertyGroup Condition="$(MSBuildProjectName.StartsWith('Eventuous.Tests'))">
-        <VSTestLogger>trx%3bLogFileName=$(MSBuildProjectName).trx</VSTestLogger>
-        <VSTestResultsDirectory>$(RepoRoot)/test-results/$(TargetFramework)</VSTestResultsDirectory>
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
-        <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
-        <EnableMSTestRunner>true</EnableMSTestRunner>
         <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
         <TestingPlatformCommandLineArguments>--report-trx --results-directory $(RepoRoot)/test-results/$(TargetFramework)</TestingPlatformCommandLineArguments>
         <TestingPlatformCaptureOutput>false</TestingPlatformCaptureOutput>
@@ -64,11 +61,8 @@
     <ItemGroup Condition="'$(IsTestProject)' == 'true'">
         <PackageReference Include="Bogus"/>
         <PackageReference Include="coverlet.collector"/>
-        <PackageReference Include="FluentAssertions"/>
         <PackageReference Include="Microsoft.Testing.Extensions.TrxReport"/>
         <PackageReference Include="TUnit"/>
-        <Using Include="FluentAssertions"/>
-        <Using Include="FluentAssertions.Extensions"/>
         <Using Include="Microsoft.Extensions.Logging"/>
     </ItemGroup>
     <ItemGroup Condition="'$(IncludeTestHost)' == 'true'">

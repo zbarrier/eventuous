@@ -1,3 +1,4 @@
+using Eventuous.Postgresql;
 using Eventuous.Postgresql.Subscriptions;
 using Eventuous.Tests.Subscriptions.Base;
 using Testcontainers.PostgreSql;
@@ -7,9 +8,20 @@ using Testcontainers.PostgreSql;
 namespace Eventuous.Tests.Postgres.Subscriptions;
 
 [NotInParallel]
+public class SubscribeToAllFromEnd()
+    : SubscribeToAllBase<PostgreSqlContainer, PostgresAllStreamSubscription, PostgresAllStreamSubscriptionOptions, PostgresCheckpointStore>(
+        new SubscriptionFixture<PostgresStore, PostgresAllStreamSubscription, PostgresAllStreamSubscriptionOptions, TestEventHandler>(opt => opt.StartFrom = Eventuous.Subscriptions.InitialPosition.Latest, false)
+    ) {
+    [Test]
+    public async Task Postgres_ShouldStartConsumptionFromEnd(CancellationToken cancellationToken) {
+        await ShouldStartConsumptionFromEnd(cancellationToken);
+    }
+}
+
+[NotInParallel]
 public class SubscribeToAll()
     : SubscribeToAllBase<PostgreSqlContainer, PostgresAllStreamSubscription, PostgresAllStreamSubscriptionOptions, PostgresCheckpointStore>(
-        new SubscriptionFixture<PostgresAllStreamSubscription, PostgresAllStreamSubscriptionOptions, TestEventHandler>(_ => { }, false)
+        new SubscriptionFixture<PostgresStore, PostgresAllStreamSubscription, PostgresAllStreamSubscriptionOptions, TestEventHandler>(_ => { }, false)
     ) {
     [Test]
     public async Task Postgres_ShouldConsumeProducedEvents(CancellationToken cancellationToken) {
@@ -32,7 +44,7 @@ public class SubscribeToAll()
 public class SubscribeToStream(StreamNameFixture streamNameFixture)
     : SubscribeToStreamBase<PostgreSqlContainer, PostgresStreamSubscription, PostgresStreamSubscriptionOptions, PostgresCheckpointStore>(
         streamNameFixture.StreamName,
-        new SubscriptionFixture<PostgresStreamSubscription, PostgresStreamSubscriptionOptions, TestEventHandler>(
+        new SubscriptionFixture<PostgresStore, PostgresStreamSubscription, PostgresStreamSubscriptionOptions, TestEventHandler>(
             opt => ConfigureOptions(opt, streamNameFixture),
             false
         )

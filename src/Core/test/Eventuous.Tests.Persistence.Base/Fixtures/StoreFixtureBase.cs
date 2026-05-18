@@ -13,7 +13,7 @@ namespace Eventuous.Tests.Persistence.Base.Fixtures;
 public interface IStartableFixture : IAsyncInitializer, IAsyncDisposable;
 
 public abstract class StoreFixtureBase {
-    public           IEventStore     EventStore { get; protected private set; } = null!;
+    public           IEventStore     EventStore { get; protected set; } = null!;
     protected static Faker           Faker      { get; }                        = new();
     protected        ServiceProvider Provider   { get; set; }                   = null!;
     protected        bool            AutoStart  { get; init; }                  = true;
@@ -49,7 +49,7 @@ public abstract partial class StoreFixtureBase<TContainer>(LogLevel logLevel) : 
             await hostedService.StartAsync(CancellationToken.None);
         }
     }
-    
+
     protected virtual ILoggingBuilder ConfigureLogging(ILoggingBuilder builder) => builder;
 
     public virtual async ValueTask DisposeAsync() {

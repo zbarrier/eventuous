@@ -5,9 +5,6 @@ using System.Threading.Channels;
 
 namespace Eventuous.Subscriptions.Channels;
 
-class ChannelWorker<T>(Channel<T> channel, ProcessElement<T> process, bool throwOnFull = false)
-    : ChannelWorkerBase<T>(channel, token => channel.Read(process, token), 1, throwOnFull);
-
 /// <summary>
 /// Creates a new instance of the channel worker, starts a task for background reads
 /// </summary>
@@ -17,5 +14,5 @@ class ChannelWorker<T>(Channel<T> channel, ProcessElement<T> process, bool throw
 sealed class ConcurrentChannelWorker<T>(Channel<T> channel, ProcessElement<T> process, int concurrencyLevel)
     : ChannelWorkerBase<T>(channel, token => channel.Read(process, token), concurrencyLevel);
 
-class BatchedChannelWorker<T>(Channel<T> channel, ProcessElement<T[]> processor, int maxCount, TimeSpan maxTime, bool throwOnFull = false)
+class BatchedChannelWorker<T>(Channel<T> channel, ProcessElement<IReadOnlyList<T>> processor, int maxCount, TimeSpan maxTime, bool throwOnFull = false)
     : ChannelWorkerBase<T>(channel, token => channel.ReadBatches(processor, maxCount, maxTime, token), 1, throwOnFull);

@@ -1,4 +1,4 @@
-// Copyright (C) Eventuous HQ OÜ.All rights reserved
+// Copyright (C) Eventuous HQ OÜ. All rights reserved
 // Licensed under the Apache License, Version 2.0.
 
 using System.Diagnostics;
@@ -18,6 +18,8 @@ public class TracedCommandService<TState> : ICommandService<TState> where TState
         InnerService        = appService;
     }
 
+    [RequiresDynamicCode(AttrConstants.DynamicSerializationMessage)]
+    [RequiresUnreferencedCode(AttrConstants.DynamicSerializationMessage)]
     public Task<Result<TState>> Handle<TCommand>(TCommand command, CancellationToken cancellationToken)
         where TCommand : class
         => CommandServiceActivity.TryExecute(

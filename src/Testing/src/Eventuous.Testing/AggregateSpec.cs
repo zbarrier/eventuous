@@ -1,4 +1,4 @@
-// Copyright (C) Eventuous HQ OÜ.All rights reserved
+// Copyright (C) Eventuous HQ OÜ. All rights reserved
 // Licensed under the Apache License, Version 2.0.
 
 using System.Diagnostics;
@@ -42,7 +42,8 @@ public abstract class AggregateSpec<TAggregate, TState>(AggregateFactoryRegistry
     [MemberNotNull(nameof(Instance))]
     protected TAggregate Then() {
         Instance = CreateInstance();
-        Instance.Load(GivenEvents());
+        var events = GivenEvents();
+        Instance.Load(events.Length - 1, events);
         When(Instance);
 
         return Instance;

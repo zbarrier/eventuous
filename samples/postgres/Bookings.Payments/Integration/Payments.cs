@@ -16,12 +16,12 @@ public static class PaymentsGateway {
             ? new GatewayMessage<RabbitMqProduceOptions>(
                 Stream,
                 new BookingPaymentRecorded(original.Stream.GetId(), evt.BookingId, evt.Amount, evt.Currency),
-                new Metadata(),
+                new(),
                 ProduceOptions
             )
             : null;
 
-        return ValueTask.FromResult(result != null ? [result] : Array.Empty<GatewayMessage<RabbitMqProduceOptions>>());
+        return ValueTask.FromResult<GatewayMessage<RabbitMqProduceOptions>[]>(result != null ? [result] : []);
     }
 }
 

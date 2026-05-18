@@ -34,10 +34,10 @@ public static class Registrations {
         services.AddEventStore<PostgresStore>();
         services.AddCommandService<BookingsCommandService, BookingState>();
 
-        services.AddSingleton<Services.IsRoomAvailable>((id, period) => new(true));
+        services.AddSingleton<Services.IsRoomAvailable>((_, _) => new(true));
 
         services.AddSingleton<Services.ConvertCurrency>(
-            (from, currency) => new Money(from.Amount * 2, currency)
+            (from, currency) => new(from.Amount * 2, currency)
         );
 
         services.AddSingleton(Mongo.ConfigureMongo(configuration));

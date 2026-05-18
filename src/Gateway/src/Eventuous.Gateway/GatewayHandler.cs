@@ -12,15 +12,15 @@ public delegate ValueTask<GatewayMessage<TProduceOptions>[]> RouteAndTransform<T
 
 /// <inheritdoc />
 class GatewayHandler<TProduceOptions>(
-        IProducer<TProduceOptions>    producer,
+        IProducer<TProduceOptions>         producer,
         RouteAndTransform<TProduceOptions> transform,
         bool                               awaitProduce
     ) : BaseEventHandler
     where TProduceOptions : class {
     public override async ValueTask<EventHandlingStatus> HandleEvent(IMessageConsumeContext context) {
-        var shovelMessages = await transform(context).NoContext();
+        var transformedMessages = await transform(context).NoContext();
 
-        if (shovelMessages.Length == 0) return EventHandlingStatus.Ignored;
+        if (transformedMessages.Length == 0) return EventHandlingStatus.Ignored;
 
         AcknowledgeProduce?  onAck  = null;
         ReportFailedProduce? onFail = null;
@@ -35,34 +35,32 @@ class GatewayHandler<TProduceOptions>(
         }
 
         try {
-            var grouped = shovelMessages.GroupBy(x => x.TargetStream);
+            var contextMeta = GatewayMetaHelper.GetContextMeta(context);
 
-            await grouped.Select(x => ProduceToStream(x.Key, x)).WhenAll().NoContext();
+            var requests = transformedMessages
+                .GroupBy(x => (x.TargetStream, x.ProduceOptions))
+                .Select(g => new ProduceRequest<TProduceOptions>(
+                        g.Key.TargetStream,
+                        g.Select(x => new ProducedMessage(x.Message, x.GetMeta(context), contextMeta) { OnAck = onAck, OnNack = onFail }),
+                        g.Key.ProduceOptions
+                    )
+                )
+                .ToArray();
+
+            if (producer is GatewayProducer<TProduceOptions> gp)
+                await gp.Produce(requests, context.CancellationToken).NoContext();
+            else
+                await Task.WhenAll(requests.Select(r => producer.Produce(r.Stream, r.Messages, r.Options, context.CancellationToken))).NoContext();
         } catch (OperationCanceledException e) { context.Nack<GatewayHandler<TProduceOptions>>(e); }
 
         return awaitProduce ? EventHandlingStatus.Success : EventHandlingStatus.Pending;
-
-        Task ProduceToStream(StreamName streamName, IEnumerable<GatewayMessage<TProduceOptions>> toProduce)
-            => toProduce.Select(
-                    x => producer.Produce(
-                        streamName,
-                        x.Message,
-                        x.GetMeta(context),
-                        x.ProduceOptions,
-                        GatewayMetaHelper.GetContextMeta(context),
-                        onAck,
-                        onFail,
-                        context.CancellationToken
-                    )
-                )
-                .WhenAll();
     }
 }
 
 class GatewayHandler<TTransform, TProduceOptions>(
         IProducer<TProduceOptions> producer,
-        TTransform                      transform,
-        bool                            awaitProduce
+        TTransform                 transform,
+        bool                       awaitProduce
     ) : GatewayHandler<TProduceOptions>(producer, transform.RouteAndTransform, awaitProduce)
     where TProduceOptions : class
     where TTransform : class, IGatewayTransform<TProduceOptions>;

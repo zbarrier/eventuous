@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
 using static Eventuous.DeserializationResult;
@@ -35,26 +36,26 @@ public class RedisStore : IEventReader, IEventWriter {
 
     const string ContentType = "application/json";
 
-    public async Task<StreamEvent[]> ReadEvents(StreamName stream, StreamReadPosition start, int count, bool failIfNotFound, CancellationToken cancellationToken) {
+    public async IAsyncEnumerable<StreamEvent> ReadEvents(StreamName stream, StreamReadPosition start, int count, [EnumeratorCancellation] CancellationToken cancellationToken) {
+        StreamEvent[] events;
+
         try {
             var result = await _getDatabase().StreamReadAsync(stream.ToString(), start.Value.ToRedisValue(), count).NoContext();
 
             if (result == null! || result.Length == 0) {
-                if (failIfNotFound) {
-                    throw new StreamNotFound(stream);
-                }
-
-                return [];
+                throw new StreamNotFound(stream);
             }
 
-            return result.Select(x => ToStreamEvent(x, _serializer, _metaSerializer)).ToArray();
+            events = result.Select(x => ToStreamEvent(x, _serializer, _metaSerializer)).ToArray();
         } catch (InvalidOperationException e) when (e.Message.Contains("Reading is not allowed after reader was completed") ||
                                                     cancellationToken.IsCancellationRequested) {
             throw new OperationCanceledException("Redis read operation terminated", e, cancellationToken);
         }
+
+        foreach (var evt in events) yield return evt;
     }
 
-    public Task<StreamEvent[]> ReadEventsBackwards(StreamName stream, StreamReadPosition start, int count, bool failIfNotFound, CancellationToken cancellationToken)
+    public IAsyncEnumerable<StreamEvent> ReadEventsBackwards(StreamName stream, StreamReadPosition start, int count, CancellationToken cancellationToken)
         => throw new NotImplementedException();
 
     public async Task<AppendEventsResult> AppendEvents(
@@ -131,6 +132,6 @@ public class RedisStore : IEventReader, IEventWriter {
         };
 
         StreamEvent AsStreamEvent(object payload)
-            => new(Guid.Parse(evt[MessageId].ToString()), payload, meta ?? new Metadata(), ContentType, evt.Id.ToLong());
+            => new(Guid.Parse(evt[MessageId].ToString()), payload, meta ?? new Metadata(), ContentType, evt.Id.ToLong(), DateTime.Parse(evt[Created]!, CultureInfo.InvariantCulture));
     }
 }

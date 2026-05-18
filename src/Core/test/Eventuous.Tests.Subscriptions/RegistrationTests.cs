@@ -8,7 +8,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Shouldly;
 using LoggingExtensions = Eventuous.TestHelpers.TUnit.Logging.LoggingExtensions;
 
 // ReSharper disable ClassNeverInstantiated.Local
@@ -16,28 +18,50 @@ using LoggingExtensions = Eventuous.TestHelpers.TUnit.Logging.LoggingExtensions;
 namespace Eventuous.Tests.Subscriptions;
 
 public class RegistrationTests {
-    readonly TestServer     _server = new(BuildHost());
+    TestServer _server = null!;
+    IHost      _host    = null!;
+
     readonly ILoggerFactory _logger = LoggingExtensions.GetLoggerFactory();
+
+    [Before(Test)]
+    public async Task Setup() {
+        _host = new HostBuilder()
+            .ConfigureWebHost(webHostBuilder => webHostBuilder
+                .UseTestServer()
+                .UseStartup<Startup>()
+            )
+            .Build();
+        await _host.StartAsync();
+
+        _server = _host.GetTestServer();
+    }
+
+    [After(Test)]
+    public async Task Teardown() {
+        _server.Dispose();
+        await _host.StopAsync();
+        _host.Dispose();
+    }
 
     [Test]
     public void ShouldBeSingletons() {
         var subs1 = _server.Services.GetServices<TestSub>().ToArray();
         var subs2 = _server.Services.GetServices<TestSub>().ToArray();
-        subs1[0].Should().BeSameAs(subs2[0]);
-        subs1[1].Should().BeSameAs(subs2[1]);
+        subs1[0].ShouldBeSameAs(subs2[0]);
+        subs1[1].ShouldBeSameAs(subs2[1]);
     }
 
     [Test]
     public void ShouldRegisterBothSubs() {
         var subs = _server.Services.GetServices<TestSub>().ToArray();
-        subs.Length.Should().Be(2);
+        subs.Length.ShouldBe(2);
     }
 
     [Test]
     public void SubsShouldHaveProperIds() {
         var subs = _server.Services.GetServices<TestSub>().ToArray();
-        subs[0].Options.SubscriptionId.Should().Be("sub1");
-        subs[1].Options.SubscriptionId.Should().Be("sub2");
+        subs[0].Options.SubscriptionId.ShouldBe("sub1");
+        subs[1].Options.SubscriptionId.ShouldBe("sub2");
     }
 
     [Test]
@@ -66,10 +90,10 @@ public class RegistrationTests {
         await current.Pipe.Send(ctx);
 
         var handled = logger.Records.Where(x => x.Context.SubscriptionId == current.SubscriptionId).ToArray();
-        handled.Length.Should().Be(1);
-        handled[0].HandlerType.Should().Be(handlerType);
-        handled[0].Context.MessageId.Should().Be(ctx.MessageId);
-        handled[0].Context.MessageType.Should().Be(ctx.MessageType);
+        handled.Length.ShouldBe(1);
+        handled[0].HandlerType.ShouldBe(handlerType);
+        handled[0].Context.MessageId.ShouldBe(ctx.MessageId);
+        handled[0].Context.MessageType.ShouldBe(ctx.MessageType);
     }
 
     [Test]
@@ -77,9 +101,9 @@ public class RegistrationTests {
         var services = _server.Services.GetServices<ISubscriptionHealth>().ToArray();
         var health   = _server.Services.GetServices<SubscriptionHealthCheck>().ToArray();
 
-        services.Length.Should().Be(1);
-        health.Length.Should().Be(1);
-        services.Single().Should().BeSameAs(health.Single());
+        services.Length.ShouldBe(1);
+        health.Length.ShouldBe(1);
+        services.Single().ShouldBeSameAs(health.Single());
     }
 
     [Test]
@@ -87,24 +111,22 @@ public class RegistrationTests {
         var subs   = _server.Services.GetServices<TestSub>().ToArray();
         var health = _server.Services.GetRequiredService<ISubscriptionHealth>() as SubscriptionHealthCheck;
 
-        subs.Length.Should().Be(2);
-        subs.Should().AllSatisfy(x => x.IsRunning.Should().BeTrue());
+        subs.Length.ShouldBe(2);
+        subs.ShouldAllBe(x => x.IsRunning);
 
-        health.Should().NotBeNull();
-        var check = await health!.CheckHealthAsync(new(), cancellationToken);
-        check.Data["sub1"].Should().Be("Healthy");
-        check.Data["sub2"].Should().Be("Healthy");
-        check.Status.Should().Be(HealthStatus.Healthy);
+        health.ShouldNotBeNull();
+        var check = await health.CheckHealthAsync(new(), cancellationToken);
+        check.Data["sub1"].ShouldBe("Healthy");
+        check.Data["sub2"].ShouldBe("Healthy");
+        check.Status.ShouldBe(HealthStatus.Healthy);
     }
 
     [Test]
     public void ShouldRegisterTwoMeasures() {
         var subs = _server.Services.GetServices<TestSub>().ToArray();
-        subs.Should().NotBeEmpty();
+        subs.ShouldNotBeEmpty();
         _server.Services.GetRequiredService<SubscriptionMetrics>();
     }
-
-    static IWebHostBuilder BuildHost() => new WebHostBuilder().UseStartup<Startup>();
 
     class Startup {
         public static void ConfigureServices(IServiceCollection services) {
@@ -122,7 +144,7 @@ public class RegistrationTests {
             services.AddHealthChecks().AddSubscriptionsHealthCheck("subscriptions", HealthStatus.Unhealthy, ["tag"]);
         }
 
-        public void Configure(IApplicationBuilder app) { }
+        public static void Configure(IApplicationBuilder app) { }
     }
 
     record TestOptions : SubscriptionOptions {

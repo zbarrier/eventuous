@@ -1,0 +1,44 @@
+// Copyright (C) Eventuous HQ OÜ. All rights reserved
+// Licensed under the Apache License, Version 2.0.
+
+namespace Eventuous.Azure.ServiceBus.Producers;
+
+/// <summary>
+/// Represents options for producing messages to Azure Service Bus.
+/// </summary>
+public class ServiceBusProduceOptions {
+    /// <summary>
+    /// Gets or sets the subject of the message.
+    /// </summary>
+    public string? Subject { get; set; }
+
+    /// <summary>
+    /// Gets or sets the destination address for the message.
+    /// </summary>
+    public string? To { get; set; }
+
+    /// <summary>
+    /// Gets or sets the address to which replies should be sent.
+    /// </summary>
+    public string? ReplyTo { get; set; }
+
+    /// <summary>
+    /// Session ID to guarantee ordering on session-enabled entities.
+    /// </summary>
+    public string? SessionId { get; init; }
+
+    /// <summary>
+    /// The reply-to session ID attribute name for request-reply over sessions.
+    /// </summary>
+    public string? ReplyToSessionId { get; init; }
+
+    /// <summary>
+    /// Gets or sets the time interval after which the message expires.
+    /// </summary>
+    public TimeSpan TimeToLive { get; set; } = TimeSpan.MaxValue;
+
+    /// <summary>
+    /// Gets or sets the date and time, in UTC, when service bus makes the message available to receivers
+    /// </summary>
+    public DateTimeOffset? ScheduledEnqueueTime { get; set; }
+}

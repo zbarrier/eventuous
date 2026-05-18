@@ -13,7 +13,7 @@ public class OperateOnAggregateWithId : AggregateWithIdSpec<TestAggregate, TestS
     public void should_emit_event() => Emitted(new TestEvent());
 
     [Test]
-    public void should_set_id() => Then().State.Id.Value.Should().Be(IdValue);
+    public async Task should_set_id() => await Assert.That(Then().State.Id.Value).IsEqualTo(IdValue);
 }
 
 public class TestAggregate : Aggregate<TestState> {
@@ -24,4 +24,5 @@ public record TestState : State<TestState, TestId>;
 
 public record TestId(string Value) : Id(Value);
 
+[EventType("TestEvent")]
 record TestEvent;

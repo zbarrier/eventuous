@@ -1,9 +1,9 @@
-// Copyright (C) Eventuous HQ OÜ.All rights reserved
+// Copyright (C) Eventuous HQ OÜ. All rights reserved
 // Licensed under the Apache License, Version 2.0.
 
 namespace Eventuous;
 
-public static class CommandServiceDelegates {
+static class CommandServiceDelegates {
     internal delegate ValueTask<TAggregate> HandleUntypedCommand<TAggregate, TState>(TAggregate aggregate, object command, CancellationToken cancellationToken)
         where TAggregate : Aggregate<TState> where TState : State<TState>, new();
 

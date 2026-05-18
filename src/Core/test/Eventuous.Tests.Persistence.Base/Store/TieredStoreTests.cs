@@ -1,6 +1,5 @@
 using Bogus;
 using DotNet.Testcontainers.Containers;
-using Eventuous.TestHelpers.TUnit;
 using Eventuous.Tests.Persistence.Base.Fixtures;
 using JetBrains.Annotations;
 
@@ -23,7 +22,7 @@ public abstract class TieredStoreTestsBase<TContainer> where TContainer : Docker
         var loaded   = (await combined.ReadStream(stream, StreamReadPosition.Start)).ToArray();
 
         var actual = loaded.Select(x => (TestEventForTiers)x.Payload!);
-        await Assert.That(actual).CollectionEquivalentTo(testEvents);
+        await Assert.That(actual).IsEquivalentTo(testEvents);
 
         await Assert.That(loaded.Take(50).Select(x => x.FromArchive)).DoesNotContain(false);
         await Assert.That(loaded.Skip(50).Select(x => x.FromArchive)).DoesNotContain(true);
@@ -37,11 +36,11 @@ public abstract class TieredStoreTestsBase<TContainer> where TContainer : Docker
     }
 
     class ArchiveStore(IEventStore original) : IEventReader, IEventWriter {
-        public Task<StreamEvent[]> ReadEvents(StreamName stream, StreamReadPosition start, int count, bool failIfNotFound, CancellationToken cancellationToken)
-            => original.ReadEvents(GetArchiveStreamName(stream), start, count, failIfNotFound, cancellationToken);
+        public IAsyncEnumerable<StreamEvent> ReadEvents(StreamName stream, StreamReadPosition start, int count, CancellationToken cancellationToken)
+            => original.ReadEvents(GetArchiveStreamName(stream), start, count, cancellationToken);
 
-        public Task<StreamEvent[]> ReadEventsBackwards(StreamName stream, StreamReadPosition start, int count, bool failIfNotFound, CancellationToken cancellationToken)
-            => original.ReadEventsBackwards(GetArchiveStreamName(stream), start, count, failIfNotFound, cancellationToken);
+        public IAsyncEnumerable<StreamEvent> ReadEventsBackwards(StreamName stream, StreamReadPosition start, int count, CancellationToken cancellationToken)
+            => original.ReadEventsBackwards(GetArchiveStreamName(stream), start, count, cancellationToken);
 
         static StreamName GetArchiveStreamName(string streamName) => new($"Archive-{streamName}");
 
@@ -60,6 +59,6 @@ record TestEventForTiers(string Data, int Number) {
     public const string TypeName = "test-event-tiers";
 
     static readonly Faker<TestEventForTiers> Faker = new Faker<TestEventForTiers>().CustomInstantiator(f => new(f.Commerce.Product(), f.Random.Int()));
-    
+
     public static IEnumerable<TestEventForTiers> CreateMany(int count) => Faker.Generate(count);
 }

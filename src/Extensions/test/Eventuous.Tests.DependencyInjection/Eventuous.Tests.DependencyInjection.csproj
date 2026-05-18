@@ -1,11 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <IncludeTestHost>true</IncludeTestHost>
-        <RootNamespace>Eventuous.Tests.AspNetCore</RootNamespace>
         <OutputType>Exe</OutputType>
     </PropertyGroup>
-    
+
     <ItemGroup>
         <ProjectReference Include="$(LocalRoot)\Eventuous.Extensions.DependencyInjection\Eventuous.Extensions.DependencyInjection.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Shouldly" />
+      <PackageReference Update="coverlet.collector">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
     </ItemGroup>
 </Project>
